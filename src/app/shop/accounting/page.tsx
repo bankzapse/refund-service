@@ -164,17 +164,19 @@ function Stat({
   tone?: "brand" | "danger";
 }) {
   return (
-    <div className="card">
+    <div className="card flex flex-col gap-3">
       <div
-        className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${
+        className={`flex h-10 w-10 items-center justify-center rounded-xl ${
           tone === "brand" ? "bg-brand-100 text-brand-700" : tone === "danger" ? "bg-red-100 text-red-600" : "bg-neutral-100 text-neutral-500"
         }`}
       >
         {icon}
       </div>
-      <p className="text-xs text-neutral-400">{label}</p>
-      <p className="text-xl font-extrabold text-neutral-800">{value}</p>
-      {sub && <p className="text-xs text-neutral-400">{sub}</p>}
+      <div>
+        <p className="text-xs text-neutral-400">{label}</p>
+        <p className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-neutral-800">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-neutral-400">{sub}</p>}
+      </div>
     </div>
   );
 }

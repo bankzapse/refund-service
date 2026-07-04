@@ -56,8 +56,9 @@ export default function HomePage() {
   return (
     <div>
       {/* hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-brand-600 to-brand-700 px-5 pb-16 pt-10 text-white">
-        <div className="absolute -right-10 -top-8 h-40 w-40 rounded-full bg-white/10" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-5 pb-16 pt-11 text-white">
+        <div className="absolute -right-12 -top-10 h-44 w-44 rounded-full bg-white/10" />
+        <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/[0.06]" />
         <div className="relative flex items-center justify-between">
           <div>
             <p className="text-sm text-white/80">สวัสดี 👋</p>
@@ -72,7 +73,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mx-auto -mt-10 max-w-md space-y-4 px-5 pb-28">
+      <div className="relative z-10 mx-auto -mt-10 max-w-md space-y-4 px-5 pb-28">
         {/* stat strip */}
         <div className="card grid grid-cols-2 divide-x divide-neutral-100">
           {isSeller ? (

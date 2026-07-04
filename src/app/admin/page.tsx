@@ -20,7 +20,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat icon={<TrendingUp className="h-5 w-5" />} label="GMV รวม (มูลค่าซื้อขาย)" value={`฿${formatBaht(p.gmv)}`} sub={`${p.billCount} บิล`} />
+        <Stat icon={<TrendingUp className="h-5 w-5" />} label="GMV รวม (มูลค่าซื้อขาย)" value={`฿${formatBaht(p.gmv)}`} sub={`${p.billCount} บิล`} tone="brand" />
         <Stat icon={<Coins className="h-5 w-5" />} label={`ค่าคอมแพลตฟอร์ม (${platformRateLabel})`} value={`฿${formatBaht(p.commission)}`} tone="gold" />
         <Stat icon={<Users className="h-5 w-5" />} label="ผู้ซื้อ / ผู้ขาย" value={`${p.buyerCount} / ${p.sellerCount}`} />
         <Stat icon={<Receipt className="h-5 w-5" />} label="บิลทั้งหมด" value={`${p.billCount}`} />
@@ -87,16 +87,18 @@ function Stat({
   label: string;
   value: string;
   sub?: string;
-  tone?: "gold";
+  tone?: "gold" | "brand";
 }) {
+  const toneCls =
+    tone === "gold" ? "bg-gold/15 text-gold-dark" : tone === "brand" ? "bg-brand-100 text-brand-700" : "bg-neutral-100 text-neutral-500";
   return (
-    <div className="card">
-      <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${tone === "gold" ? "bg-gold/15 text-gold-dark" : "bg-neutral-100 text-neutral-500"}`}>
-        {icon}
+    <div className="card flex flex-col gap-3">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${toneCls}`}>{icon}</div>
+      <div>
+        <p className="text-xs text-neutral-400">{label}</p>
+        <p className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-neutral-800">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-neutral-400">{sub}</p>}
       </div>
-      <p className="text-xs text-neutral-400">{label}</p>
-      <p className="text-xl font-extrabold text-neutral-800">{value}</p>
-      {sub && <p className="text-xs text-neutral-400">{sub}</p>}
     </div>
   );
 }
