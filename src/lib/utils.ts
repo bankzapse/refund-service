@@ -1,0 +1,95 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+/** 1,234 บาท (ไม่มีทศนิยม โดยดีฟอลต์) */
+export function formatBaht(n: number, decimals = false) {
+  return new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: decimals ? 2 : 0,
+    maximumFractionDigits: decimals ? 2 : 0,
+  }).format(n ?? 0);
+}
+
+/** 4 ก.ค. 2569 (พ.ศ. อัตโนมัติจาก locale th-TH) */
+export function thaiDate(d: string | Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(d));
+}
+
+export function thaiDateShort(d: string | Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(d));
+}
+
+export function thaiWeekday(d: string | Date) {
+  return new Intl.DateTimeFormat("th-TH", { weekday: "long" }).format(new Date(d));
+}
+
+export function thaiDateTime(d: string | Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(d));
+}
+
+/** "2 ชั่วโมงที่แล้ว" */
+export function timeAgo(d: string | Date) {
+  const diff = Date.now() - new Date(d).getTime();
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "เมื่อสักครู่";
+  if (min < 60) return `${min} นาทีที่แล้ว`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} ชั่วโมงที่แล้ว`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day} วันที่แล้ว`;
+  return thaiDate(d);
+}
+
+export function uid(prefix = "") {
+  const rand =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `${prefix}${rand}`;
+}
+
+/** RF-4821 */
+export function jobCode() {
+  return "RF-" + Math.floor(1000 + Math.random() * 9000);
+}
+
+/** B-4821 (เลขบิลรับซื้อ) */
+export function billCode() {
+  return "B-" + Math.floor(1000 + Math.random() * 9000);
+}
+
+/** เลขสิทธิ์ลุ้นรางวัล 6 หลัก */
+export function ticketNumber() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export function todayISO() {
+  return new Date().toISOString();
+}
+
+export function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function thaiMonthLabel(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric" }).format(
+    new Date(y, m - 1, 1),
+  );
+}

@@ -1,0 +1,81 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type { Role } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Home, ClipboardList, Wallet, CalendarClock, Plus, Coins } from "lucide-react";
+
+type Item = { href: string; label: string; icon: React.ElementType };
+
+const NAV: Record<"seller" | "buyer", Item[]> = {
+  seller: [
+    { href: "/home", label: "หน้าแรก", icon: Home },
+    { href: "/jobs", label: "รายการ", icon: ClipboardList },
+    { href: "/income", label: "รายได้", icon: Wallet },
+  ],
+  buyer: [
+    { href: "/home", label: "หน้าแรก", icon: Home },
+    { href: "/jobs", label: "งานของฉัน", icon: ClipboardList },
+    { href: "/wallet", label: "เครดิต", icon: Coins },
+    { href: "/schedule", label: "ตาราง", icon: CalendarClock },
+    { href: "/income", label: "บัญชี", icon: Wallet },
+  ],
+};
+
+export function BottomNav({ role }: { role: Role }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // admin ไม่ใช้ bottom nav (มี layout แยก)
+  if (role !== "seller" && role !== "buyer") return null;
+  // Hide tab bar on full-screen task pages (they have their own action bars)
+  if (pathname.startsWith("/create") || pathname.startsWith("/job/") || pathname.startsWith("/rewards")) {
+    return null;
+  }
+
+  const items = NAV[role];
+  const isSeller = role === "seller";
+
+  const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-neutral-100 bg-white/95 backdrop-blur">
+      <div className="relative flex items-stretch justify-around px-2 pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1.5">
+        {items.map((it, idx) => {
+          // insert center FAB for seller in the middle
+          const showFab = isSeller && idx === Math.floor(items.length / 2);
+          return (
+            <div key={it.href} className="contents">
+              {showFab && <FabSlot onClick={() => router.push("/create")} />}
+              <Link
+                href={it.href}
+                className={cn(
+                  "flex w-16 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition",
+                  active(it.href) ? "text-brand-600" : "text-neutral-400",
+                )}
+              >
+                <it.icon className="h-[22px] w-[22px]" strokeWidth={active(it.href) ? 2.4 : 2} />
+                {it.label}
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function FabSlot({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex w-16 items-start justify-center">
+      <button
+        onClick={onClick}
+        aria-label="สร้างรายการ"
+        className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-float ring-4 ring-white transition active:scale-95"
+      >
+        <Plus className="h-7 w-7" />
+      </button>
+    </div>
+  );
+}

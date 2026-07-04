@@ -1,0 +1,173 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Data repository — โหลด/เขียนผ่าน Supabase แล้ว map เป็นรูป DB เดิมของแอป
+ * เพื่อให้ selectors + ทุก component ทำงานเหมือนเดิม (ไม่ต้องแก้)
+ * ใช้เมื่อ supabaseConfigured = true เท่านั้น
+ */
+import type { DB } from "../seed";
+import type { Bill, Expense, Job, RewardDraw, RewardTicket, ScheduleSlot, User, WalletTxn } from "../types";
+import { MATERIALS } from "../materials";
+import { jobCode, ticketNumber, todayISO } from "../utils";
+
+/* ---------------- mappers (snake_case → app shape) ---------------- */
+function toUser(p: any): User {
+  return {
+    id: p.id, role: p.role, name: p.name, phone: p.phone ?? "",
+    email: p.email ?? undefined, lineUserId: p.line_user_id ?? undefined,
+    lineConnected: !!p.line_connected, baseLat: p.base_lat ?? undefined, baseLng: p.base_lng ?? undefined,
+    status: p.status ?? "active", credit: p.credit != null ? Number(p.credit) : 0, partner: !!p.partner,
+    createdAt: p.created_at,
+  };
+}
+function toWallet(w: any): WalletTxn {
+  return { id: w.id, buyerId: w.buyer_id, type: w.type, amount: Number(w.amount), balanceAfter: Number(w.balance_after ?? 0), note: w.note ?? undefined, jobId: w.job_id ?? undefined, date: w.created_at };
+}
+function toDraw(d: any): RewardDraw {
+  return {
+    month: d.month, prizeName: d.prize_name, prizeValue: Number(d.prize_value ?? 0),
+    winningNumber: d.winning_number ?? "", winnerName: d.winner_name ?? undefined,
+    announcedAt: d.announced_at ?? undefined, status: d.status,
+  };
+}
+function toTicket(t: any): RewardTicket {
+  return { id: t.id, number: t.number, userId: t.user_id, month: t.month, fromJobId: t.from_job_id ?? undefined };
+}
+function toSlot(s: any, nameById: Map<string, string>): ScheduleSlot {
+  return { id: s.id, buyerId: s.buyer_id, buyerName: nameById.get(s.buyer_id) ?? "", date: s.date, area: s.area ?? "", capacity: s.capacity, booked: s.booked };
+}
+function toExpense(e: any): Expense {
+  return { id: e.id, buyerId: e.buyer_id, category: e.category, amount: Number(e.amount), date: e.date, note: e.note ?? undefined, createdAt: e.created_at };
+}
+
+/** โหลดข้อมูลทั้งหมดที่ user เห็น (RLS คัดกรองให้) → รูป DB */
+export async function loadAll(sb: any): Promise<DB> {
+  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet] =
+    await Promise.all([
+      sb.from("profiles").select("*"),
+      sb.from("material_prices").select("*"),
+      sb.from("buyer_prices").select("*"),
+      sb.from("schedule_slots").select("*"),
+      sb.from("jobs").select("*"),
+      sb.from("job_items").select("*"),
+      sb.from("job_status_history").select("*"),
+      sb.from("bills").select("*"),
+      sb.from("bill_items").select("*"),
+      sb.from("expenses").select("*"),
+      sb.from("reward_tickets").select("*"),
+      sb.from("reward_draws").select("*"),
+      sb.from("wallet_transactions").select("*"),
+    ]);
+
+  const userRows: any[] = users.data ?? [];
+  const nameById = new Map<string, string>(userRows.map((u) => [u.id, u.name]));
+
+  // central prices
+  const centralPrices: Record<string, number> = {};
+  (prices.data ?? []).forEach((p: any) => (centralPrices[p.id] = Number(p.price_per_unit)));
+
+  // buyer prices
+  const buyerPrices: Record<string, Record<string, number>> = {};
+  (bprices.data ?? []).forEach((r: any) => {
+    (buyerPrices[r.buyer_id] ??= {})[r.material_id] = Number(r.price);
+  });
+
+  // jobs assemble
+  const itemsByJob = new Map<string, any[]>();
+  (jobItems.data ?? []).forEach((it: any) => (itemsByJob.get(it.job_id) ?? itemsByJob.set(it.job_id, []).get(it.job_id))!.push(it));
+  const histByJob = new Map<string, any[]>();
+  (jobHist.data ?? []).forEach((h: any) => (histByJob.get(h.job_id) ?? histByJob.set(h.job_id, []).get(h.job_id))!.push(h));
+  const jobsOut: Job[] = (jobs.data ?? []).map((j: any) => ({
+    id: j.id, code: j.code, sellerId: j.seller_id, sellerName: nameById.get(j.seller_id) ?? "",
+    buyerId: j.buyer_id ?? undefined, buyerName: j.buyer_id ? nameById.get(j.buyer_id) : undefined,
+    items: (itemsByJob.get(j.id) ?? []).map((it) => ({ materialId: it.material_id, name: it.name, unit: it.unit, pricePerUnit: Number(it.price_per_unit), qty: Number(it.qty) })),
+    estimatedTotal: Number(j.estimated_total ?? 0),
+    location: { lat: j.lat ?? 0, lng: j.lng ?? 0, address: j.address ?? "" },
+    houseNo: j.house_no ?? "", landmark: j.landmark ?? "", contactName: j.contact_name ?? "", contactPhone: j.contact_phone ?? "",
+    scheduledDate: j.scheduled_date ?? "", note: j.note ?? undefined, status: j.status,
+    history: (histByJob.get(j.id) ?? []).sort((a, b) => (a.at < b.at ? -1 : 1)).map((h) => ({ status: h.status, at: h.at, note: h.note ?? undefined })),
+    finalAmount: j.final_amount != null ? Number(j.final_amount) : undefined,
+    createdAt: j.created_at,
+  }));
+
+  // bills assemble
+  const itemsByBill = new Map<string, any[]>();
+  (billItems.data ?? []).forEach((it: any) => (itemsByBill.get(it.bill_id) ?? itemsByBill.set(it.bill_id, []).get(it.bill_id))!.push(it));
+  const billsOut: Bill[] = (bills.data ?? []).map((b: any) => ({
+    id: b.id, code: b.code, buyerId: b.buyer_id, source: b.source, jobId: b.job_id ?? undefined,
+    sellerName: b.seller_name ?? "", sellerPhone: b.seller_phone ?? "", date: b.created_at,
+    items: (itemsByBill.get(b.id) ?? []).map((it) => ({ materialId: it.material_id, name: it.name, unit: it.unit ?? "", qty: Number(it.qty), pricePerUnit: Number(it.price_per_unit), subtotal: Number(it.subtotal) })),
+    goodsTotal: Number(b.goods_total), fee: Number(b.fee), netPaid: Number(b.net_paid),
+    paymentMethod: b.payment_method, status: b.status, createdAt: b.created_at,
+  }));
+
+  return {
+    users: userRows.map(toUser),
+    jobs: jobsOut,
+    slots: (slots.data ?? []).map((s: any) => toSlot(s, nameById)),
+    tickets: (tickets.data ?? []).map(toTicket),
+    draws: (draws.data ?? []).map(toDraw),
+    bills: billsOut,
+    expenses: (expenses.data ?? []).map(toExpense),
+    buyerPrices,
+    centralPrices,
+    wallet: (wallet.data ?? []).map(toWallet),
+    pricesUpdatedAt: todayISO(),
+  };
+}
+
+/* ---------------- writes ---------------- */
+export async function createJob(sb: any, me: User, input: any, slotBuyerId?: string) {
+  const est = input.items.reduce((s: number, i: any) => s + i.pricePerUnit * i.qty, 0);
+  const { data: job, error } = await sb.from("jobs").insert({
+    code: jobCode(), seller_id: me.id, buyer_id: slotBuyerId ?? null, slot_id: input.slotId ?? null,
+    status: "submitted", lat: input.location.lat, lng: input.location.lng, address: input.location.address,
+    house_no: input.houseNo, landmark: input.landmark, contact_name: input.contactName, contact_phone: input.contactPhone,
+    scheduled_date: input.scheduledDate, note: input.note ?? null, estimated_total: est,
+  }).select("id").single();
+  if (error) throw error;
+  if (input.items.length) {
+    await sb.from("job_items").insert(input.items.map((it: any) => ({ job_id: job.id, material_id: it.materialId, name: it.name, unit: it.unit, price_per_unit: it.pricePerUnit, qty: it.qty })));
+  }
+  await sb.from("job_status_history").insert({ job_id: job.id, status: "submitted" });
+  return job.id as string;
+}
+export async function updateJobStatus(sb: any, jobId: string, status: string, patch: any, note?: string) {
+  await sb.from("jobs").update({ status, ...patch }).eq("id", jobId);
+  await sb.from("job_status_history").insert({ job_id: jobId, status, note: note ?? null });
+}
+export async function claimJob(sb: any, me: User, jobId: string) {
+  await sb.from("jobs").update({ status: "confirmed", buyer_id: me.id }).eq("id", jobId);
+  await sb.from("job_status_history").insert({ job_id: jobId, status: "confirmed", note: "ผู้ซื้อรับงาน" });
+}
+
+/** 🔒 ปิดงาน/ออกบิล/สิทธิ์ ผ่าน RPC (server-side) */
+export async function settleBill(sb: any, input: any) {
+  const { data, error } = await sb.rpc("settle_bill", {
+    p_source: input.source, p_job_id: input.jobId ?? null,
+    p_seller_name: input.sellerName, p_seller_phone: input.sellerPhone,
+    p_items: input.items.map((i: any) => ({ material_id: i.materialId, name: i.name, unit: i.unit, qty: i.qty, price_per_unit: i.pricePerUnit })),
+    p_payment: input.paymentMethod,
+  });
+  if (error) throw error;
+  return data as string;
+}
+export const voidBill = (sb: any, id: string) => sb.from("bills").update({ status: "void" }).eq("id", id);
+export const addExpense = (sb: any, me: User, i: any) => sb.from("expenses").insert({ buyer_id: me.id, category: i.category, amount: i.amount, date: i.date, note: i.note ?? null });
+export const removeExpense = (sb: any, id: string) => sb.from("expenses").delete().eq("id", id);
+export const addSlot = (sb: any, me: User, i: any) => sb.from("schedule_slots").insert({ buyer_id: me.id, date: i.date, area: i.area, capacity: i.capacity, booked: 0 });
+export const removeSlot = (sb: any, id: string) => sb.from("schedule_slots").delete().eq("id", id);
+export const setBuyerPrice = (sb: any, me: User, materialId: string, price: number) => sb.from("buyer_prices").upsert({ buyer_id: me.id, material_id: materialId, price });
+export const setBaseLocation = (sb: any, me: User, lat: number, lng: number) => sb.from("profiles").update({ base_lat: lat, base_lng: lng }).eq("id", me.id);
+export const connectLine = (sb: any, me: User) => sb.from("profiles").update({ line_connected: true, line_user_id: "U" + Math.random().toString(36).slice(2, 10) }).eq("id", me.id);
+export const setUserStatus = (sb: any, userId: string, status: string) => sb.rpc("set_user_status", { p_user: userId, p_status: status });
+export const setCentralPrice = (sb: any, materialId: string, price: number) => {
+  const m = MATERIALS.find((x) => x.id === materialId);
+  return sb.from("material_prices").upsert({ id: materialId, name: m?.name ?? materialId, unit: m?.unit ?? "กก.", price_per_unit: price, emoji: m?.emoji, category: m?.category });
+};
+export const setDrawPrize = (sb: any, month: string, prizeName: string, prizeValue: number) =>
+  sb.from("reward_draws").upsert({ month, prize_name: prizeName, prize_value: prizeValue });
+export const drawWinner = (sb: any, month: string) => sb.rpc("draw_reward_winner", { p_month: month });
+export const adjustCredit = (sb: any, userId: string, amount: number, note?: string) => sb.rpc("adjust_credit", { p_user: userId, p_amount: amount, p_note: note ?? null });
+
+// อ้างอิงเพื่อกัน unused ในบางเส้นทาง
+export const _unused = { ticketNumber };
