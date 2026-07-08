@@ -195,6 +195,11 @@ export function bagQr(franchiseCode: string, cabinetCode: string, bagCode: strin
   return fr ? `${fr}-${cab}-${bagCode}` : `${cab}-${bagCode}`;
 }
 /** รหัสตู้แบบเต็ม = "GLN-AA" (แฟรนไชส์-ตู้) */
+/** แสดงรหัสตู้แบบมีขีด เช่น TK01 → TK-01 (ตัวโค้ดจริงไม่มีขีด เพื่อไม่ให้ QR แตก) */
+export function displayCabinetCode(code: string): string {
+  const m = /^(TK)0*(\d+)$/i.exec(code || "");
+  return m ? `${m[1].toUpperCase()}-${m[2].padStart(2, "0")}` : (code || "").toUpperCase();
+}
 export function cabinetFullCode(franchiseCode: string, cabinetCode: string): string {
   const fr = (franchiseCode || "").toUpperCase();
   const cab = (cabinetCode || "").toUpperCase();

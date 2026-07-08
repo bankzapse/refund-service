@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { franchiseById } from "@/lib/selectors";
 import { cn } from "@/lib/utils";
-import { LogOut, ArrowLeft, LayoutDashboard, Box, PackageOpen, FileText, Landmark } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Box, PackageOpen, FileText, Landmark, Banknote } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import Link from "next/link";
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/franchise/cabinets", label: "รหัสตู้", icon: Box },
   { href: "/franchise/bags", label: "ถุงทั้งหมด", icon: PackageOpen },
   { href: "/franchise/reports", label: "รายงาน", icon: FileText },
+  { href: "/franchise/income", label: "เงินเข้า", icon: Banknote },
   { href: "/franchise/payout", label: "บัญชีรับเงิน", icon: Landmark },
 ];
 

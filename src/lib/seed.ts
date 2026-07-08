@@ -384,9 +384,9 @@ export function createInitialDB(): DB {
     { id: "fr-bkk", code: "BKK", name: "รีไซเคิลบางกะปิ", ownerName: "คุณวิภา", phone: "0955551111", createdAt: addDays(now, -50).toISOString() },
   ];
   const cabinets: Cabinet[] = [
-    { id: "cab-aa", code: "AA", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Lotus's ลาดพร้าว", location: { lat: 13.8161, lng: 100.5613, address: "โลตัส ลาดพร้าว ชั้น G" }, province: "กรุงเทพมหานคร", district: "จตุจักร", subdistrict: "จอมพล", status: "active", createdAt: addDays(now, -60).toISOString() },
-    { id: "cab-bb", code: "AB", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Big C พระราม 4", location: { lat: 13.7231, lng: 100.5451, address: "บิ๊กซี พระราม 4 หน้าทางเข้า" }, province: "กรุงเทพมหานคร", district: "คลองเตย", subdistrict: "คลองเตย", status: "active", createdAt: addDays(now, -45).toISOString() },
-    { id: "cab-cc", code: "AA", franchiseId: "fr-bkk", franchiseCode: "BKK", name: "โลตัส บางกะปิ", location: { lat: 13.7654, lng: 100.6432, address: "โลตัส บางกะปิ ลานจอดรถ" }, province: "กรุงเทพมหานคร", district: "บางกะปิ", subdistrict: "คลองจั่น", status: "active", createdAt: addDays(now, -30).toISOString() },
+    { id: "cab-aa", code: "TK01", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Lotus's ลาดพร้าว", location: { lat: 13.8161, lng: 100.5613, address: "โลตัส ลาดพร้าว ชั้น G" }, province: "กรุงเทพมหานคร", district: "จตุจักร", subdistrict: "จอมพล", status: "active", createdAt: addDays(now, -60).toISOString() },
+    { id: "cab-bb", code: "TK02", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Big C พระราม 4", location: { lat: 13.7231, lng: 100.5451, address: "บิ๊กซี พระราม 4 หน้าทางเข้า" }, province: "กรุงเทพมหานคร", district: "คลองเตย", subdistrict: "คลองเตย", status: "active", createdAt: addDays(now, -45).toISOString() },
+    { id: "cab-cc", code: "TK03", franchiseId: "fr-bkk", franchiseCode: "BKK", name: "โลตัส บางกะปิ", location: { lat: 13.7654, lng: 100.6432, address: "โลตัส บางกะปิ ลานจอดรถ" }, province: "กรุงเทพมหานคร", district: "บางกะปิ", subdistrict: "คลองจั่น", status: "active", createdAt: addDays(now, -30).toISOString() },
   ];
 
   const bagItem = (id: string, qty: number): BagItem => {
@@ -428,14 +428,14 @@ export function createInitialDB(): DB {
     }
   };
   mkPts(seller, [
-    { type: "earn", points: 45, note: "ถุง GLN-AA-0000001", day: -4 },
-    { type: "earn", points: 28, note: "ถุง GLN-AA-0000002", day: -3 },
-    { type: "earn", points: 60, note: "ถุง GLN-AA-0000003", day: -1 },
+    { type: "earn", points: 45, note: "ถุง GLN-TK01-0000001", day: -4 },
+    { type: "earn", points: 28, note: "ถุง GLN-TK01-0000002", day: -3 },
+    { type: "earn", points: 60, note: "ถุง GLN-TK01-0000003", day: -1 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: -1, hour: 20 },
     { type: "adjust", points: 500, note: "โบนัสทดสอบระบบ", day: 0 },
   ]); // → 533
   mkPts(seller2, [
-    { type: "earn", points: 120, note: "ถุง BKK-AA-0000001", day: -2 },
+    { type: "earn", points: 120, note: "ถุง BKK-TK03-0000001", day: -2 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: 0 },
   ]); // → 20
 

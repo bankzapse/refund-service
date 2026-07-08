@@ -223,6 +223,8 @@ export const setRedemptionStatus = (sb: any, id: string, status: string) =>
   sb.rpc("set_redemption_status", { p_id: id, p_status: status });
 export const addCabinet = (sb: any, input: { code: string; name: string; address: string; franchiseCode: string; lat?: number; lng?: number }) =>
   sb.rpc("add_cabinet", { p_franchise_code: input.franchiseCode, p_code: input.code, p_name: input.name, p_address: input.address, p_lat: input.lat ?? null, p_lng: input.lng ?? null });
+export const editCabinet = (sb: any, id: string, patch: { name?: string; address?: string }) =>
+  sb.from("cabinets").update({ ...(patch.name != null ? { name: patch.name } : {}), ...(patch.address != null ? { address: patch.address } : {}) }).eq("id", id);
 export const addFranchise = (sb: any, input: { code: string; name: string; ownerName: string; phone: string }) =>
   sb.rpc("add_franchise", { p_code: input.code, p_name: input.name, p_owner: input.ownerName, p_phone: input.phone });
 

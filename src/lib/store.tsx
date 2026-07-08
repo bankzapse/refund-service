@@ -36,8 +36,8 @@ function profileToUser(p: any): User {
   };
 }
 
-const DB_KEY = "rf_db_v12";
-const USER_KEY = "rf_user_v12";
+const DB_KEY = "rf_db_v13";
+const USER_KEY = "rf_user_v13";
 
 type Toast = { id: string; text: string; kind: "success" | "info" | "line" };
 
@@ -123,7 +123,8 @@ interface StoreValue {
   redeemPoints: (amountBaht: number, points: number, method: "promptpay" | "bank", account: string) => void;
   markRedemptionPaid: (id: string) => void;
   rejectRedemption: (id: string) => void;
-  addCabinet: (input: { code: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
+  addCabinet: (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
+  editCabinet: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   addFranchise: (input: { code: string; name: string; ownerName: string; phone: string }) => void;
 }
 
@@ -965,10 +966,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addCabinet = useCallback(
-    (input: { code: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => {
-      const code = input.code.trim().toUpperCase();
+    (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => {
       const fr = (input.franchiseCode || "").trim().toUpperCase();
-      if (!code) { pushToast("กรุณาระบุรหัสตู้", "info"); return; }
+      // รหัสตู้อัตโนมัติ TK01, TK02, … (รันทั้งระบบ) ถ้าไม่ได้ระบุมา
+      let code = (input.code ?? "").trim().toUpperCase();
+      if (!code) {
+        const nums = db.cabinets.map((c) => Number(/^TK0*(\d+)$/.exec(c.code)?.[1] ?? 0));
+        const next = (nums.length ? Math.max(0, ...nums) : 0) + 1;
+        code = "TK" + String(next).padStart(2, "0");
+      }
       const full = fr ? `${fr}-${code}` : code;
       if (supabaseConfigured) return sbWrite((sb) => repo.addCabinet(sb, { ...input, code, franchiseCode: fr }), `เพิ่มตู้ ${full} แล้ว`, "success");
       if (db.cabinets.some((c) => c.code === code && c.franchiseCode === fr)) { pushToast(`มีตู้ ${full} อยู่แล้ว`, "info"); return; }
@@ -982,6 +988,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pushToast(`เพิ่มตู้ ${full} แล้ว`, "success");
     },
     [db.cabinets, pushToast],
+  );
+
+  // แก้ไขชื่อ/ที่อยู่ตู้ (แฟรนไชส์)
+  const editCabinet = useCallback(
+    (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
+      if (supabaseConfigured) return sbWrite((sb) => repo.editCabinet(sb, id, patch), "บันทึกการแก้ไขตู้แล้ว", "success");
+      setDb((d) => ({
+        ...d,
+        cabinets: d.cabinets.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                name: patch.name?.trim() || c.name,
+                location: { ...c.location, address: patch.address?.trim() ?? c.location.address },
+                province: patch.province?.trim() || undefined,
+                district: patch.district?.trim() || undefined,
+                subdistrict: patch.subdistrict?.trim() || undefined,
+              }
+            : c,
+        ),
+      }));
+      pushToast("บันทึกการแก้ไขตู้แล้ว", "success");
+    },
+    [pushToast],
   );
 
   const addFranchise = useCallback(
@@ -1044,6 +1074,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     reviewPayout,
     payFranchise,
     addCabinet,
+    editCabinet,
     addFranchise,
   };
 

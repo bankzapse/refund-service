@@ -1,11 +1,11 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { franchiseById, franchiseSummary, franchiseRevenue, franchisePayoutsFor } from "@/lib/selectors";
+import { franchiseById, franchiseSummary, franchiseRevenue } from "@/lib/selectors";
 import { CONTRACT_PER_CABINET } from "@/lib/revenue";
-import { formatBaht, thaiDateTime } from "@/lib/utils";
+import { formatBaht } from "@/lib/utils";
 import { RevenueExport } from "@/components/RevenueExport";
-import { Box, PackageOpen, Coins, Wallet, Users, FileText, Building2, CheckCircle2, ArrowDownCircle, Banknote } from "lucide-react";
+import { Box, PackageOpen, Coins, Wallet, Users, FileText, Building2, CheckCircle2 } from "lucide-react";
 
 export default function FranchiseDashboard() {
   const { db, currentUser } = useStore();
@@ -13,8 +13,6 @@ export default function FranchiseDashboard() {
   const fr = franchiseById(db, u.franchiseId ?? "");
   const s = franchiseSummary(db, u.franchiseId ?? "");
   const rev = franchiseRevenue(db, u.franchiseId ?? "");
-  const income = franchisePayoutsFor(db, u.franchiseId ?? "");
-  const totalIn = income.reduce((sum, p) => sum + p.amount, 0);
 
   if (!fr) return <p className="py-16 text-center text-neutral-400">ไม่พบข้อมูลแฟรนไชส์</p>;
 
@@ -75,30 +73,6 @@ export default function FranchiseDashboard() {
           </div>
         </div>
         <p className="mt-2 text-[11px] text-neutral-400">ช่วงผ่อน: บริษัท 80% / คุณ 20% จนกว่าจะครบค่าสัญญา · หลังครบ: คุณ 80% / บริษัท 20% (ค่าจ้างเก็บของ + ดูแลระบบ)</p>
-      </div>
-
-      {/* ประวัติเงินเข้า */}
-      <div className="card">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 font-bold text-neutral-800"><Banknote className="h-4 w-4 text-brand-600" /> ประวัติเงินเข้า</h2>
-          <span className="text-sm text-neutral-500">รับแล้วรวม <b className="text-brand-700">฿{formatBaht(totalIn)}</b></span>
-        </div>
-        {income.length === 0 ? (
-          <div className="py-8 text-center text-sm text-neutral-400">ยังไม่มีเงินโอนเข้าจากบริษัท</div>
-        ) : (
-          <div className="divide-y divide-neutral-100">
-            {income.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 py-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><ArrowDownCircle className="h-5 w-5" /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-neutral-800">โอนส่วนแบ่งรายได้</p>
-                  <p className="text-xs text-neutral-400">{thaiDateTime(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</p>
-                </div>
-                <p className="text-lg font-bold text-brand-700">+฿{formatBaht(p.amount)}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
