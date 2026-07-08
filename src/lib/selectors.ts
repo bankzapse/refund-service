@@ -403,6 +403,12 @@ export function franchiseById(db: DB, id: string): Franchise | undefined {
 export function cabinetsForFranchise(db: DB, franchiseId: string): CabinetWithCounts[] {
   return cabinetsWithCounts(db).filter((c) => c.franchiseId === franchiseId);
 }
+/** ประวัติเงินเข้า (บริษัทโอนส่วนแบ่งให้แฟรนไชส์) — ล่าสุดก่อน */
+export function franchisePayoutsFor(db: DB, franchiseId: string) {
+  return (db.franchisePayouts ?? [])
+    .filter((p) => p.franchiseId === franchiseId)
+    .sort((a, b) => (a.paidAt < b.paidAt ? 1 : -1));
+}
 /** ถุงทั้งหมดในตู้ของแฟรนไชส์ (ล่าสุดก่อน) */
 export function bagsForFranchise(db: DB, franchiseId: string): MeshBag[] {
   const cabIds = new Set((db.cabinets ?? []).filter((c) => c.franchiseId === franchiseId).map((c) => c.id));

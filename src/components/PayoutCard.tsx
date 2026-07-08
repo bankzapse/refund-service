@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fileToDataUrl } from "@/lib/image";
+import { THAI_BANKS } from "@/lib/banks";
 import type { PayoutStatus } from "@/lib/types";
 import { Landmark, Upload, CheckCircle2, Clock, XCircle, Pencil, Loader2 } from "lucide-react";
 
@@ -80,7 +81,12 @@ export function PayoutCard() {
         <div className="space-y-3">
           <div>
             <label className="label">ธนาคาร</label>
-            <input className="input" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="เช่น กสิกรไทย" />
+            <select className="input bg-white" value={bankName} onChange={(e) => setBankName(e.target.value)}>
+              <option value="">— เลือกธนาคาร —</option>
+              {THAI_BANKS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">เลขที่บัญชี</label>

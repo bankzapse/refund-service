@@ -63,8 +63,8 @@ export function createInitialDB(): DB {
     email: "seller@demo.com",
     lineConnected: true,
     lineUserId: "Uxxxxdemo1",
-    points: 33,
-    payout: { bankName: "กสิกรไทย", accountNo: "123-4-56789-0", accountName: "มานี ใจดี", status: "approved", submittedAt: addDays(now, -20).toISOString(), reviewedAt: addDays(now, -19).toISOString() },
+    points: 533,
+    payout: { bankName: "ธนาคารกสิกรไทย (KBank)", accountNo: "123-4-56789-0", accountName: "มานี ใจดี", status: "approved", submittedAt: addDays(now, -20).toISOString(), reviewedAt: addDays(now, -19).toISOString() },
     createdAt: new Date(now.getFullYear(), now.getMonth() - 2, 3).toISOString(),
   };
   const seller2: User = {
@@ -120,7 +120,7 @@ export function createInitialDB(): DB {
     email: "franchise@demo.com",
     lineConnected: false,
     franchiseId: "fr-gln",
-    payout: { bankName: "ไทยพาณิชย์", accountNo: "456-7-89012-3", accountName: "เอกชัย รักษ์โลก", status: "pending", submittedAt: addDays(now, -1).toISOString() },
+    payout: { bankName: "ธนาคารไทยพาณิชย์ (SCB)", accountNo: "456-7-89012-3", accountName: "เอกชัย รักษ์โลก", status: "pending", submittedAt: addDays(now, -1).toISOString() },
     createdAt: new Date(now.getFullYear(), now.getMonth() - 2, 15).toISOString(),
   };
 
@@ -432,7 +432,8 @@ export function createInitialDB(): DB {
     { type: "earn", points: 28, note: "ถุง GLN-AA-0000002", day: -3 },
     { type: "earn", points: 60, note: "ถุง GLN-AA-0000003", day: -1 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: -1, hour: 20 },
-  ]); // → 33
+    { type: "adjust", points: 500, note: "โบนัสทดสอบระบบ", day: 0 },
+  ]); // → 533
   mkPts(seller2, [
     { type: "earn", points: 120, note: "ถุง BKK-AA-0000001", day: -2 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: 0 },
