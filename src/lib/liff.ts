@@ -55,6 +55,22 @@ export async function isInLineClient(): Promise<boolean> {
   return liff ? liff.isInClient() : false;
 }
 
+/**
+ * สแกน QR ด้วยกล้องในไลน์ (liff.scanCodeV2) — คืนสตริงที่อ่านได้ หรือ null
+ * ใช้ได้เมื่อเปิดผ่าน LINE + เปิดฟีเจอร์ scanQRCode ใน LINE Developers Console
+ * null = สแกนไม่ได้/ยกเลิก → ให้ผู้ใช้กรอกเอง
+ */
+export async function scanQr(): Promise<string | null> {
+  const liff = await initLiff();
+  if (!liff || typeof liff.scanCodeV2 !== "function") return null;
+  try {
+    const res = await liff.scanCodeV2();
+    return res?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** ปิดหน้าต่าง LIFF (เมื่ออยู่ในไลน์) */
 export async function closeLiff() {
   const liff = await initLiff();

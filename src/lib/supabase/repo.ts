@@ -5,7 +5,7 @@
  * ใช้เมื่อ supabaseConfigured = true เท่านั้น
  */
 import type { DB } from "../seed";
-import type { Bill, Expense, Job, RewardDraw, RewardTicket, ScheduleSlot, User, WalletTxn } from "../types";
+import type { Bill, Expense, Job, RewardDraw, RewardTicket, ScheduleSlot, User, WalletTxn, Cabinet, MeshBag, BagItem, PointTxn, Redemption } from "../types";
 import { MATERIALS } from "../materials";
 import { jobCode, ticketNumber, todayISO } from "../utils";
 
@@ -16,8 +16,27 @@ function toUser(p: any): User {
     email: p.email ?? undefined, lineUserId: p.line_user_id ?? undefined,
     lineConnected: !!p.line_connected, baseLat: p.base_lat ?? undefined, baseLng: p.base_lng ?? undefined,
     status: p.status ?? "active", credit: p.credit != null ? Number(p.credit) : 0, partner: !!p.partner,
+    points: p.points != null ? Number(p.points) : 0,
     createdAt: p.created_at,
   };
+}
+function toCabinet(c: any): Cabinet {
+  return { id: c.id, code: c.code, name: c.name, location: { lat: c.lat ?? 0, lng: c.lng ?? 0, address: c.address ?? "" }, status: c.status ?? "active", createdAt: c.created_at };
+}
+function toBag(b: any, nameById: Map<string, string>, itemsByBag: Map<string, BagItem[]>): MeshBag {
+  return {
+    id: b.id, code: b.code, qr: b.qr, cabinetId: b.cabinet_id ?? "", cabinetCode: b.cabinet_code ?? "",
+    userId: b.user_id, userName: nameById.get(b.user_id) ?? "", status: b.status,
+    items: itemsByBag.get(b.id), valueBaht: b.value_baht != null ? Number(b.value_baht) : undefined,
+    points: b.points != null ? Number(b.points) : undefined, note: b.note ?? undefined,
+    droppedAt: b.dropped_at, creditedAt: b.credited_at ?? undefined,
+  };
+}
+function toPointTxn(t: any): PointTxn {
+  return { id: t.id, userId: t.user_id, type: t.type, points: Number(t.points), balanceAfter: Number(t.balance_after ?? 0), note: t.note ?? undefined, bagId: t.bag_id ?? undefined, redemptionId: t.redemption_id ?? undefined, date: t.created_at };
+}
+function toRedemption(r: any, nameById: Map<string, string>): Redemption {
+  return { id: r.id, code: r.code, userId: r.user_id, userName: nameById.get(r.user_id) ?? "", amountBaht: Number(r.amount_baht), points: Number(r.points), method: r.method, account: r.account ?? "", status: r.status, requestedAt: r.requested_at, paidAt: r.paid_at ?? undefined };
 }
 function toWallet(w: any): WalletTxn {
   return { id: w.id, buyerId: w.buyer_id, type: w.type, amount: Number(w.amount), balanceAfter: Number(w.balance_after ?? 0), note: w.note ?? undefined, jobId: w.job_id ?? undefined, date: w.created_at };
@@ -41,7 +60,7 @@ function toExpense(e: any): Expense {
 
 /** โหลดข้อมูลทั้งหมดที่ user เห็น (RLS คัดกรองให้) → รูป DB */
 export async function loadAll(sb: any): Promise<DB> {
-  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet] =
+  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet, cabs, meshBags, bagItems, pointTxns, redemptions] =
     await Promise.all([
       sb.from("profiles").select("*"),
       sb.from("material_prices").select("*"),
@@ -56,6 +75,11 @@ export async function loadAll(sb: any): Promise<DB> {
       sb.from("reward_tickets").select("*"),
       sb.from("reward_draws").select("*"),
       sb.from("wallet_transactions").select("*"),
+      sb.from("cabinets").select("*"),
+      sb.from("mesh_bags").select("*"),
+      sb.from("bag_items").select("*"),
+      sb.from("point_transactions").select("*"),
+      sb.from("redemptions").select("*"),
     ]);
 
   const userRows: any[] = users.data ?? [];
@@ -111,11 +135,19 @@ export async function loadAll(sb: any): Promise<DB> {
     buyerPrices,
     centralPrices,
     wallet: (wallet.data ?? []).map(toWallet),
-    // Drop & Go — ยังไม่ผูก Supabase (เฟสถัดไป) · คืน [] กันหน้าแอปพัง
-    cabinets: [],
-    bags: [],
-    pointTxns: [],
-    redemptions: [],
+    // Drop & Go
+    cabinets: (cabs.data ?? []).map(toCabinet),
+    bags: (() => {
+      const itemsByBag = new Map<string, BagItem[]>();
+      (bagItems.data ?? []).forEach((it: any) => {
+        const arr = itemsByBag.get(it.bag_id) ?? [];
+        arr.push({ materialId: it.material_id, name: it.name, qty: Number(it.qty), pricePerUnit: Number(it.price_per_unit), subtotal: Number(it.subtotal) });
+        itemsByBag.set(it.bag_id, arr);
+      });
+      return (meshBags.data ?? []).map((b: any) => toBag(b, nameById, itemsByBag));
+    })(),
+    pointTxns: (pointTxns.data ?? []).map(toPointTxn),
+    redemptions: (redemptions.data ?? []).map((r: any) => toRedemption(r, nameById)),
     pricesUpdatedAt: todayISO(),
   };
 }
@@ -173,6 +205,18 @@ export const setDrawPrize = (sb: any, month: string, prizeName: string, prizeVal
   sb.from("reward_draws").upsert({ month, prize_name: prizeName, prize_value: prizeValue });
 export const drawWinner = (sb: any, month: string) => sb.rpc("draw_reward_winner", { p_month: month });
 export const adjustCredit = (sb: any, userId: string, amount: number, note?: string) => sb.rpc("adjust_credit", { p_user: userId, p_amount: amount, p_note: note ?? null });
+
+/* ---------------- Drop & Go ---------------- */
+export const dropBags = (sb: any, cabinetCode: string, bagCodes: string[]) =>
+  sb.rpc("drop_bags", { p_cabinet_code: cabinetCode, p_bag_codes: bagCodes });
+export const valueBag = (sb: any, bagId: string, items: BagItem[]) =>
+  sb.rpc("value_bag", { p_bag_id: bagId, p_items: items.map((i) => ({ material_id: i.materialId, name: i.name, qty: i.qty, price_per_unit: i.pricePerUnit, subtotal: i.subtotal })) });
+export const redeemPoints = (sb: any, amountBaht: number, points: number, method: string, account: string) =>
+  sb.rpc("redeem_points", { p_amount: amountBaht, p_points: points, p_method: method, p_account: account });
+export const setRedemptionStatus = (sb: any, id: string, status: string) =>
+  sb.rpc("set_redemption_status", { p_id: id, p_status: status });
+export const addCabinet = (sb: any, input: { code: string; name: string; address: string; lat?: number; lng?: number }) =>
+  sb.rpc("add_cabinet", { p_code: input.code, p_name: input.name, p_address: input.address, p_lat: input.lat ?? null, p_lng: input.lng ?? null });
 
 // อ้างอิงเพื่อกัน unused ในบางเส้นทาง
 export const _unused = { ticketNumber };

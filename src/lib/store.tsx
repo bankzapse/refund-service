@@ -24,6 +24,9 @@ function profileToUser(p: any): User {
     baseLat: p.base_lat ?? undefined,
     baseLng: p.base_lng ?? undefined,
     status: (p.status as "active" | "suspended") ?? "active",
+    credit: p.credit != null ? Number(p.credit) : 0,
+    partner: !!p.partner,
+    points: p.points != null ? Number(p.points) : 0,
     createdAt: p.created_at,
   };
 }
@@ -748,9 +751,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!currentUser) return;
       const code = cabinetCode.trim().toUpperCase().replace(/^#?(TH-)?/i, "").split("-")[0];
       const clean = [...new Set(bagCodes.map((b) => b.trim().split("-").pop()!.replace(/[^0-9]/g, "")).filter(Boolean))];
+      if (clean.length === 0) { pushToast("กรุณาเพิ่มถุงอย่างน้อย 1 ใบ", "info"); return; }
+      if (supabaseConfigured) return sbWrite((sb) => repo.dropBags(sb, code, clean), `หย่อน ${clean.length} ถุง · รอคะแนน`, "line");
       const cab = db.cabinets.find((c) => c.code === code);
       if (!cab) { pushToast(`ไม่พบตู้รหัส ${code || "-"}`, "info"); return; }
-      if (clean.length === 0) { pushToast("กรุณาเพิ่มถุงอย่างน้อย 1 ใบ", "info"); return; }
       const now = todayISO();
       const newBags: MeshBag[] = clean.map((bc) => ({
         id: uid("bag-"), code: bc, qr: `#${COUNTRY_CODE}-${cab.code}-${bc}`, cabinetId: cab.id, cabinetCode: cab.code,
@@ -768,6 +772,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const valueBag = useCallback(
     (bagId: string, items: BagItem[]) => {
+      if (supabaseConfigured) return sbWrite((sb) => repo.valueBag(sb, bagId, items), "ตีราคา + ให้คะแนนแล้ว", "line");
       setDb((d) => {
         const bag = d.bags.find((b) => b.id === bagId);
         if (!bag) return d;
@@ -792,6 +797,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!currentUser) return;
       if ((currentUser.points ?? 0) < points) { pushToast("คะแนนไม่พอสำหรับตัวเลือกนี้", "info"); return; }
       if (!account.trim()) { pushToast("กรุณากรอกพร้อมเพย์/เลขบัญชีรับเงิน", "info"); return; }
+      if (supabaseConfigured) return sbWrite((sb) => repo.redeemPoints(sb, amountBaht, points, method, account.trim()), `ส่งคำขอแลกเงิน ฿${amountBaht}`, "success");
       const now = todayISO();
       const bal = (currentUser.points ?? 0) - points;
       const rid = uid("r-");
@@ -808,11 +814,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const markRedemptionPaid = useCallback((id: string) => {
+    if (supabaseConfigured) return sbWrite((sb) => repo.setRedemptionStatus(sb, id, "paid"), "ทำเครื่องหมายจ่ายเงินแล้ว", "success");
     setDb((d) => ({ ...d, redemptions: d.redemptions.map((r) => (r.id === id ? { ...r, status: "paid", paidAt: todayISO() } : r)) }));
     pushToast("ทำเครื่องหมายจ่ายเงินแล้ว", "success");
   }, [pushToast]);
 
   const rejectRedemption = useCallback((id: string) => {
+    if (supabaseConfigured) return sbWrite((sb) => repo.setRedemptionStatus(sb, id, "rejected"), "ปฏิเสธคำขอ + คืนคะแนนแล้ว", "info");
     setDb((d) => {
       const r = d.redemptions.find((x) => x.id === id);
       if (!r || r.status !== "pending") return d;
@@ -831,6 +839,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (input: { code: string; name: string; address: string; lat?: number; lng?: number }) => {
       const code = input.code.trim().toUpperCase();
       if (!code) { pushToast("กรุณาระบุรหัสตู้", "info"); return; }
+      if (supabaseConfigured) return sbWrite((sb) => repo.addCabinet(sb, { ...input, code }), `เพิ่มตู้ ${code} แล้ว`, "success");
       if (db.cabinets.some((c) => c.code === code)) { pushToast(`มีตู้รหัส ${code} อยู่แล้ว`, "info"); return; }
       const cab: Cabinet = { id: uid("cab-"), code, name: input.name.trim() || code, location: { lat: input.lat ?? 13.7563, lng: input.lng ?? 100.5018, address: input.address.trim() }, status: "active", createdAt: todayISO() };
       setDb((d) => ({ ...d, cabinets: [...d.cabinets, cab] }));

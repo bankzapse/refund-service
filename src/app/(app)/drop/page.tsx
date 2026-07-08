@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui";
 import { bagsForUser } from "@/lib/selectors";
 import { BAG_STATUS_META, MIN_ITEMS_PER_BAG, MAX_BAGS_PER_DROP } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
+import { liffConfigured, scanQr } from "@/lib/liff";
 import { QrCode, Plus, Trash2, PackagePlus, Box, Coins, ChevronRight, Info } from "lucide-react";
 
 export default function DropPage() {
@@ -19,19 +20,33 @@ export default function DropPage() {
   const [bagInput, setBagInput] = useState("");
   const [bags, setBags] = useState<string[]>([]);
 
-  // demo: สุ่มรหัสถุง 7 หลัก (production ใช้ liff.scanCodeV2)
+  // demo: สุ่มรหัสถุง 7 หลัก (จริงใช้ liff.scanCodeV2 ในไลน์)
   const genBag = () => String(Math.floor(Math.random() * 9_000_000) + 1_000_000);
 
-  const addBag = () => {
-    const raw = (bagInput.trim() || genBag());
+  const pushBag = (raw: string) => {
     const code = raw.split("-").pop()!.replace(/[^0-9]/g, "");
     if (!code) return;
-    if (bags.includes(code)) return;
-    if (bags.length >= MAX_BAGS_PER_DROP) return;
-    setBags((b) => [...b, code]);
+    setBags((b) => (b.includes(code) || b.length >= MAX_BAGS_PER_DROP ? b : [...b, code]));
     setBagInput("");
   };
+  const addBag = () => pushBag(bagInput.trim() || genBag());
   const removeBag = (c: string) => setBags((b) => b.filter((x) => x !== c));
+
+  // สแกน QR รหัสตู้ (ในไลน์ใช้กล้อง, เว็บ/เดโมเติมตัวอย่าง)
+  const scanCabinet = async () => {
+    if (liffConfigured) {
+      const v = await scanQr();
+      if (v) { setCabinet(v); return; }
+    }
+    setCabinet(db.cabinets[0]?.code ?? "AA");
+  };
+  const scanBag = async () => {
+    if (liffConfigured) {
+      const v = await scanQr();
+      if (v) { pushBag(v); return; }
+    }
+    addBag();
+  };
 
   const confirm = () => {
     dropBags(cabinet, bags);
@@ -62,7 +77,7 @@ export default function DropPage() {
               onChange={(e) => setCabinet(e.target.value)}
             />
             <button
-              onClick={() => setCabinet(db.cabinets[0]?.code ?? "AA")}
+              onClick={scanCabinet}
               aria-label="สแกน"
               className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600"
             >
@@ -112,7 +127,7 @@ export default function DropPage() {
               onKeyDown={(e) => e.key === "Enter" && addBag()}
             />
             <button
-              onClick={addBag}
+              onClick={scanBag}
               aria-label="สแกนถุง"
               className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600"
             >

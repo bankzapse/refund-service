@@ -25,10 +25,13 @@ src/lib/supabase/queries.ts    data seam: fetchProfile/fetchCentralPrices/settle
 - **โปรเจกต์ใหม่:** Dashboard → **SQL Editor** → วางทั้งไฟล์ [`supabase/schema.sql`](supabase/schema.sql) → Run (schema.sql รวมโมเดลเครดิตไว้แล้ว)
 - ได้ตาราง + RLS + function + อัตราเลทโรงงานเริ่มต้น
 
-> **โปรเจกต์เดิม (มี schema เก่าอยู่แล้ว)** — อย่ารัน schema.sql ซ้ำ ให้รัน migration แยกแทน (ไม่ลบข้อมูล, รันซ้ำได้):
-> วาง [`supabase/migrations/20260705000001_credit_partner_model.sql`](supabase/migrations/20260705000001_credit_partner_model.sql) ใน SQL Editor → Run
-> เพิ่ม `profiles.credit/partner`, ตาราง `wallet_transactions` + RLS, และอัปเดต `settle_bill` (ค่าคอม 2% หักเครดิต + gate ≥ 300) + RPC `adjust_credit`/`topup_credit`
-> ผู้รับซื้อเดิมเริ่มด้วยเครดิต 0 → ให้แอดมิน/เติมเงินก่อนถึงจะรับงานได้
+> **โปรเจกต์เดิม (มี schema เก่าอยู่แล้ว)** — อย่ารัน schema.sql ซ้ำ ให้รัน migration ตามลำดับแทน (ไม่ลบข้อมูล, รันซ้ำได้):
+> 1. [`20260705000001_credit_partner_model.sql`](supabase/migrations/20260705000001_credit_partner_model.sql) — `profiles.credit/partner` + `wallet_transactions` + `settle_bill` (ค่าคอม 2% หักเครดิต, gate ≥ 300) + `adjust_credit`/`topup_credit`
+> 2. [`20260705000002_drop_and_go.sql`](supabase/migrations/20260705000002_drop_and_go.sql) — `profiles.points` + ตาราง `cabinets`/`mesh_bags`/`bag_items`/`point_transactions`/`redemptions` + RLS + RPC `drop_bags`/`value_bag`/`redeem_points`/`set_redemption_status`/`add_cabinet` (คะแนน = มูลค่า × 10)
+>
+> ผู้รับซื้อเดิมเริ่มด้วยเครดิต 0 · คนทิ้งเริ่มคะแนน 0
+
+> **Drop & Go — QR scanner ในไลน์:** เปิด LINE Developers Console → LIFF app → เพิ่ม scope **`scanQRCode`** (ไม่งั้น `liff.scanCodeV2()` จะถูกปิด แอปจะ fallback ให้กรอกรหัสเอง)
 
 ### 3) ใส่ env (`.env.local`)
 ```bash
