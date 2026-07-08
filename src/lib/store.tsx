@@ -79,6 +79,7 @@ interface StoreValue {
   register: (input: RegisterInput) => User;
   loginWithLine: (profile: { userId: string; displayName: string; pictureUrl?: string }) => void;
   logout: () => void;
+  deleteAccount: () => Promise<void>;
   connectLine: () => void;
   // seller
   createJob: (input: CreateJobInput) => Promise<Job>;
@@ -304,6 +305,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCurrentUserId(null);
     }
   }, []);
+
+  const deleteAccount = useCallback(async () => {
+    if (!currentUser) return;
+    if (supabaseConfigured) {
+      try {
+        const res = await fetch("/api/account/delete", { method: "POST" });
+        if (!res.ok) { pushToast("ลบบัญชีไม่สำเร็จ ลองใหม่อีกครั้ง", "info"); return; }
+      } catch {
+        pushToast("ลบบัญชีไม่สำเร็จ (เครือข่ายมีปัญหา)", "info");
+        return;
+      }
+      logout();
+      pushToast("ลบบัญชีและข้อมูลเรียบร้อย", "success");
+      return;
+    }
+    // เดโม: ลบผู้ใช้ + ข้อมูลของเขาออกจาก localStorage
+    const uid = currentUser.id;
+    setDb((d) => ({
+      ...d,
+      users: d.users.filter((u) => u.id !== uid),
+      bags: d.bags.filter((b) => b.userId !== uid),
+      pointTxns: d.pointTxns.filter((t) => t.userId !== uid),
+      redemptions: d.redemptions.filter((r) => r.userId !== uid),
+      jobs: d.jobs.filter((j) => j.sellerId !== uid),
+    }));
+    logout();
+    pushToast("ลบบัญชีและข้อมูลเรียบร้อย", "success");
+  }, [currentUser, logout, pushToast]);
 
   const connectLine = useCallback(() => {
     if (supabaseConfigured) {
@@ -879,6 +908,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     register,
     loginWithLine,
     logout,
+    deleteAccount,
     connectLine,
     createJob,
     cancelJob,

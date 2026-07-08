@@ -84,7 +84,8 @@
 Google (ตั้งแต่ 2022) และ Apple บังคับให้มีช่องทางลบบัญชี **จากในแอป** และ/หรือ **URL เว็บ**
 - **มีแล้ว:** `https://<โดเมน>/delete-account` (หน้า `src/app/delete-account/page.tsx`) — อธิบายวิธีขอลบ (ในแอป/อีเมล/LINE), ข้อมูลที่ลบ, ข้อยกเว้นตามกฎหมาย, ระยะเวลา 30 วัน
 - ใส่ URL นี้ใน: **Play Console → Data safety → Deletion** และ **App Store review notes**
-- เมื่อทำ deletion แบบ in-app จริง (ปุ่มในแอป) ควรผูก endpoint ลบข้อมูลจริงใน Supabase (RPC/service role) เพิ่ม
+- **มี in-app deletion จริงแล้ว:** แท็บคะแนน → “ลบบัญชีและข้อมูล” → เรียก `POST /api/account/delete`
+  (ตรวจ session → ลบ auth user ด้วย service_role → cascade ลบ profiles/bags/points/redemptions) · โหมดเดโมลบใน localStorage
 
 ## หมายเหตุก่อนกรอก
 - ถ้าเฟสแรก **ไม่เปิดใช้ location/analytics/crash SDK จริง** → อย่าติ๊กชนิดนั้น (กรอกเกินจริงก็ถูกปฏิเสธได้) ปรับตามที่เปิดใช้จริงตอนส่ง

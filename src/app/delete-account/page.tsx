@@ -17,7 +17,7 @@ export default function DeleteAccountPage() {
       <Sec n={1} title="วิธีขอลบบัญชี">
         <UL
           items={[
-            <><b>ในแอป:</b> ตั้งค่า → บัญชี → “ลบบัญชี” แล้วยืนยัน (เมื่อเปิดใช้ฟีเจอร์นี้)</>,
+            <><b>ในแอป (แนะนำ):</b> แท็บ “คะแนน” → เลื่อนลงล่างสุด → “ลบบัญชีและข้อมูล” → ยืนยัน (ลบทันที)</>,
             <><b>อีเมล:</b> ส่งคำขอมาที่ <a href="mailto:support@greendrop.co?subject=ขอลบบัญชี%20GreenDrop" className="text-brand-600">support@greendrop.co</a> พร้อมเบอร์โทร/อีเมลที่ใช้สมัคร</>,
             <><b>LINE:</b> ทักหาเราที่ <b>@greendrop</b> แจ้ง “ขอลบบัญชี”</>,
           ]}
