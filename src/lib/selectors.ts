@@ -403,6 +403,35 @@ export function franchiseById(db: DB, id: string): Franchise | undefined {
 export function cabinetsForFranchise(db: DB, franchiseId: string): CabinetWithCounts[] {
   return cabinetsWithCounts(db).filter((c) => c.franchiseId === franchiseId);
 }
+/** ถุงทั้งหมดในตู้ของแฟรนไชส์ (ล่าสุดก่อน) */
+export function bagsForFranchise(db: DB, franchiseId: string): MeshBag[] {
+  const cabIds = new Set((db.cabinets ?? []).filter((c) => c.franchiseId === franchiseId).map((c) => c.id));
+  return (db.bags ?? [])
+    .filter((b) => cabIds.has(b.cabinetId))
+    .sort((a, b) => (a.droppedAt < b.droppedAt ? 1 : -1));
+}
+/** สรุปถุงตามช่วงเวลา (นับ droppedAt) สำหรับรายงาน day/week/month/year */
+export interface PeriodReport {
+  bagCount: number;
+  creditedBags: number;
+  pendingBags: number;
+  valueTotal: number;
+  pointsIssued: number;
+  dropperCount: number;
+}
+export function franchisePeriodReport(db: DB, franchiseId: string, since: Date): PeriodReport {
+  const cutoff = since.toISOString();
+  const bags = bagsForFranchise(db, franchiseId).filter((b) => b.droppedAt >= cutoff);
+  const credited = bags.filter((b) => b.status === "credited");
+  return {
+    bagCount: bags.length,
+    creditedBags: credited.length,
+    pendingBags: bags.length - credited.length,
+    valueTotal: credited.reduce((s, b) => s + (b.valueBaht ?? 0), 0),
+    pointsIssued: credited.reduce((s, b) => s + (b.points ?? 0), 0),
+    dropperCount: new Set(bags.map((b) => b.userId)).size,
+  };
+}
 export interface FranchiseSummary {
   cabinetCount: number;
   bagCount: number;

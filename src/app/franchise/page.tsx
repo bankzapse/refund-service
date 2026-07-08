@@ -45,7 +45,9 @@ export default function FranchiseDashboard() {
             <span className="font-mono font-semibold text-brand-700">{fr.code}</span> · {fr.name} · เจ้าของ {fr.ownerName} ({fr.phone})
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/franchise/bags" className="btn-outline !py-2.5 text-sm"><PackageOpen className="h-4 w-4" /> ถุงทั้งหมด</Link>
+          <Link href="/franchise/reports" className="btn-outline !py-2.5 text-sm"><FileText className="h-4 w-4" /> รายงานสรุป</Link>
           <RevenueExport franchiseId={fr.id} size="md" />
           <button onClick={() => setOpen(true)} className="btn-primary !px-4 !py-2.5 text-sm"><Plus className="h-4 w-4" /> เพิ่มตู้</button>
         </div>
