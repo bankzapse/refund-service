@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- GreenDrop app icon — ต้นฉบับสำหรับ generate icon/splash (npm run assets) -->
+  <!-- ใช้อาร์ตชุดเดียวกับ src/components/Logo.tsx (droplet + recycle) -->
+  <rect width="1024" height="1024" rx="224" fill="#16a34a"/>
+  <g transform="translate(192,192) scale(13.333)">
+    <!-- droplet (white on green) -->
+    <path d="M24 3.5c0 0 15.5 15.6 15.5 26.2A15.5 15.5 0 1 1 8.5 29.7C8.5 19.1 24 3.5 24 3.5Z" fill="#ffffff"/>
+    <!-- recycle loop -->
+    <g stroke="#16a34a" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M17.6 27.4a7 7 0 0 1 11.1-5.2" />
+      <path d="M30.4 30.1a7 7 0 0 1-11.2 4.9" />
+    </g>
+    <path d="M29.2 18.3l0.4 4.4-4.3-1.0z" fill="#16a34a" />
+    <path d="M18.8 39.0l-0.4-4.4 4.3 1.0z" fill="#16a34a" />
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+# Capacitor generated native projects (regenerate ด้วย `npx cap add ios/android`)
+/ios/
+/android/
+
+# deps
+/node_modules/
+package-lock.json
+
+# generated icon/splash outputs (มาจาก resources/ ด้วย `npm run assets`)
+/resources/ios/
+/resources/android/

@@ -9,6 +9,7 @@ import { bagsForUser } from "@/lib/selectors";
 import { BAG_STATUS_META, MIN_ITEMS_PER_BAG, MAX_BAGS_PER_DROP, parseBagQr, bagQr, cabinetFullCode } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
 import { liffConfigured, scanQr } from "@/lib/liff";
+import { isNativeApp, nativeScanQr } from "@/lib/native";
 import { QrCode, Plus, Trash2, PackagePlus, Box, Coins, ChevronRight, Info, ScanLine } from "lucide-react";
 
 export default function DropPage() {
@@ -36,7 +37,11 @@ export default function DropPage() {
   };
 
   const scan = async () => {
-    if (liffConfigured) {
+    // แอป native → กล้อง MLKit; ในไลน์ → liff.scanCodeV2
+    if (isNativeApp()) {
+      const v = await nativeScanQr();
+      if (v) { handleCode(v); return; }
+    } else if (liffConfigured) {
       const v = await scanQr();
       if (v) { handleCode(v); return; }
     }

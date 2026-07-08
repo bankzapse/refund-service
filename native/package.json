@@ -1,0 +1,32 @@
+{
+  "name": "greendrop-native",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GreenDrop — native iOS/Android shell (Capacitor WebView) โหลดเว็บ production",
+  "scripts": {
+    "init": "cap init GreenDrop co.greendrop.app --web-dir public",
+    "add:ios": "cap add ios",
+    "add:android": "cap add android",
+    "sync": "cap sync",
+    "assets": "capacitor-assets generate --assetPath resources",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "run:ios": "cap run ios",
+    "run:android": "cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/browser": "^6.0.4",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.2",
+    "@capacitor-mlkit/barcode-scanning": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.2.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { Toaster } from "@/components/ui";
 import { Shell } from "@/components/Shell";
+import { NativeBootstrap } from "@/components/NativeBootstrap";
 
 const fontSans = IBM_Plex_Sans_Thai({
   subsets: ["thai", "latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="th" className={fontSans.variable}>
       <body>
         <StoreProvider>
+          <NativeBootstrap />
           <Shell>{children}</Shell>
           <Toaster />
         </StoreProvider>

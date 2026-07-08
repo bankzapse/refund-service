@@ -8,22 +8,36 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * วิธีใช้: ดู native/README.md
  */
 const config: CapacitorConfig = {
-  appId: "co.greendrop.app", // เปลี่ยนเป็น bundle id จริงตอนสมัคร store
+  appId: "co.greendrop.app", // bundle id / package — จองให้ตรงกันทั้ง 2 store
   appName: "GreenDrop",
-  webDir: "public", // ไม่ได้ใช้จริง (โหลดจาก server.url) แต่ Capacitor ต้องมี
+  webDir: "public", // placeholder (โหลดจริงจาก server.url) แต่ Capacitor ต้องมี
   server: {
     url: "https://app.greendrop.co", // โดเมน production ของเว็บ
     cleartext: false,
     androidScheme: "https",
+    iosScheme: "https",
   },
   ios: {
     contentInset: "always",
+    backgroundColor: "#ffffff",
   },
   android: {
     allowMixedContent: false,
+    backgroundColor: "#ffffff",
   },
   plugins: {
-    SplashScreen: { launchShowDuration: 800, backgroundColor: "#16a34a" },
+    SplashScreen: {
+      launchShowDuration: 800,
+      backgroundColor: "#16a34a",
+      showSpinner: false,
+      androidScaleType: "CENTER_CROP",
+    },
+    StatusBar: {
+      style: "LIGHT",
+      backgroundColor: "#16a34a",
+    },
+    // @capacitor-mlkit/barcode-scanning ทำงานผ่านกล้อง ไม่ต้อง config เพิ่ม
+    // (iOS ต้องมี NSCameraUsageDescription, Android ต้องมี permission กล้อง — ดู README)
   },
 };
 
