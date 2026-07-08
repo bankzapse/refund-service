@@ -13,7 +13,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/shop") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/franchise") ||
-    pathname.startsWith("/reports");
+    pathname.startsWith("/reports") ||
+    pathname.startsWith("/login"); // login pages เต็มจอเอง (AuthScreen มีพื้นหลังของตัวเอง)
   if (desktop) return <div className="min-h-dvh w-full">{children}</div>;
   return <div className="app-shell">{children}</div>;
 }
