@@ -8,7 +8,8 @@ import { pointsOf, pointsLedger, redemptionsForUser } from "@/lib/selectors";
 import { REDEEM_TIERS, POINTS_PER_BAHT } from "@/lib/types";
 import type { PointTxn, Redemption } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
-import { RefreshCw, Banknote, ArrowUpCircle, ArrowDownCircle, SlidersHorizontal, Info, Clock, CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { RefreshCw, Banknote, ArrowUpCircle, ArrowDownCircle, SlidersHorizontal, Info, Clock, CheckCircle2, XCircle, Landmark, ChevronRight } from "lucide-react";
 
 export default function PointsPage() {
   const { db, currentUser, redeemPoints } = useStore();
@@ -16,10 +17,11 @@ export default function PointsPage() {
   const points = pointsOf(db, u.id);
   const ledger = pointsLedger(db, u.id);
   const redemptions = redemptionsForUser(db, u.id);
+  const approved = u.payout?.status === "approved";
 
   const [tier, setTier] = useState<(typeof REDEEM_TIERS)[number] | null>(null);
   const [account, setAccount] = useState(u.phone);
-  const [tab, setTab] = useState<"redeem" | "history">("redeem");
+  const [tab, setTab] = useState<"redeem" | "redemptions" | "points">("redeem");
 
   const doRedeem = () => {
     if (!tier) return;
@@ -47,26 +49,40 @@ export default function PointsPage() {
         {/* tabs */}
         <div className="flex gap-1 rounded-xl bg-neutral-100 p-1">
           <TabBtn active={tab === "redeem"} onClick={() => setTab("redeem")}>แลกเงินสด</TabBtn>
-          <TabBtn active={tab === "history"} onClick={() => setTab("history")}>ประวัติ</TabBtn>
+          <TabBtn active={tab === "redemptions"} onClick={() => setTab("redemptions")}>ประวัติการแลก</TabBtn>
+          <TabBtn active={tab === "points"} onClick={() => setTab("points")}>ประวัติคะแนน</TabBtn>
         </div>
 
-        {tab === "redeem" ? (
+        {tab === "redeem" && (
           <>
+            {!approved && (
+              <Link href="/profile" className="flex items-start gap-2.5 rounded-2xl bg-amber-50 p-3.5 text-sm text-amber-800 ring-1 ring-amber-100">
+                <Landmark className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                <div className="flex-1">
+                  <p className="font-semibold">ต้องยืนยันบัญชีรับเงินก่อนแลกเงิน</p>
+                  <p className="text-xs text-amber-700/80">
+                    {u.payout?.status === "pending" ? "ส่งบัญชีแล้ว — รอบริษัทอนุมัติ" : u.payout?.status === "rejected" ? "บัญชีถูกปฏิเสธ — แก้ไขแล้วส่งใหม่" : "เพิ่มบัญชี + สำเนา book bank ที่หน้าโปรไฟล์"}
+                  </p>
+                </div>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />
+              </Link>
+            )}
             <div className="grid grid-cols-2 gap-3">
               {REDEEM_TIERS.map((t) => {
                 const enough = points >= t.points;
+                const usable = enough && approved;
                 return (
                   <button
                     key={t.amountBaht}
-                    disabled={!enough}
-                    onClick={() => { setTier(t); setAccount(u.phone); }}
+                    disabled={!usable}
+                    onClick={() => { setTier(t); setAccount(u.payout?.accountNo || u.phone); }}
                     className="card-tap flex flex-col items-start gap-1 text-left disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-card"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
                       <Banknote className="h-5 w-5" />
                     </span>
                     <p className="mt-1 text-lg font-extrabold text-neutral-800">แลกเงิน ฿{formatBaht(t.amountBaht)}</p>
-                    <p className={`text-xs font-medium ${enough ? "text-brand-600" : "text-neutral-400"}`}>
+                    <p className={`text-xs font-medium ${usable ? "text-brand-600" : "text-neutral-400"}`}>
                       ใช้ {formatBaht(t.points)} คะแนน
                     </p>
                   </button>
@@ -75,30 +91,29 @@ export default function PointsPage() {
             </div>
             <div className="flex items-start gap-2 rounded-2xl bg-brand-50 p-3.5 text-xs text-brand-800 ring-1 ring-brand-100">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>โอนเข้าพร้อมเพย์ภายใน 1-3 วันทำการ · อัตรา 1 คะแนน = ฿1</p>
+              <p>โอนเข้าบัญชีที่ยืนยันภายใน 1-3 วันทำการ · อัตรา 1 คะแนน = ฿1</p>
             </div>
           </>
-        ) : (
-          <div className="space-y-4">
-            {redemptions.length > 0 && (
-              <div>
-                <p className="section-title mb-2 px-1">คำขอแลกเงิน</p>
-                <div className="space-y-2">
-                  {redemptions.map((r) => <RedemptionRow key={r.id} r={r} />)}
-                </div>
-              </div>
-            )}
-            <div>
-              <p className="section-title mb-2 px-1">ประวัติคะแนน</p>
-              {ledger.length === 0 ? (
-                <div className="card"><EmptyState icon="✨" title="ยังไม่มีประวัติคะแนน" /></div>
-              ) : (
-                <div className="card divide-y divide-neutral-100 !py-1">
-                  {ledger.map((t) => <LedgerRow key={t.id} t={t} />)}
-                </div>
-              )}
+        )}
+
+        {tab === "redemptions" && (
+          redemptions.length === 0 ? (
+            <div className="card"><EmptyState icon="🏦" title="ยังไม่มีประวัติการแลกเงิน" hint="แลกคะแนนเป็นเงินสดที่แท็บ “แลกเงินสด”" /></div>
+          ) : (
+            <div className="space-y-2">
+              {redemptions.map((r) => <RedemptionRow key={r.id} r={r} />)}
             </div>
-          </div>
+          )
+        )}
+
+        {tab === "points" && (
+          ledger.length === 0 ? (
+            <div className="card"><EmptyState icon="✨" title="ยังไม่มีประวัติคะแนน" /></div>
+          ) : (
+            <div className="card divide-y divide-neutral-100 !py-1">
+              {ledger.map((t) => <LedgerRow key={t.id} t={t} />)}
+            </div>
+          )
         )}
       </div>
 
