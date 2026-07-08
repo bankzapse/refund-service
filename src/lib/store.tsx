@@ -36,8 +36,8 @@ function profileToUser(p: any): User {
   };
 }
 
-const DB_KEY = "rf_db_v10";
-const USER_KEY = "rf_user_v10";
+const DB_KEY = "rf_db_v11";
+const USER_KEY = "rf_user_v11";
 
 type Toast = { id: string; text: string; kind: "success" | "info" | "line" };
 
@@ -120,7 +120,7 @@ interface StoreValue {
   redeemPoints: (amountBaht: number, points: number, method: "promptpay" | "bank", account: string) => void;
   markRedemptionPaid: (id: string) => void;
   rejectRedemption: (id: string) => void;
-  addCabinet: (input: { code: string; name: string; address: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
+  addCabinet: (input: { code: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
   addFranchise: (input: { code: string; name: string; ownerName: string; phone: string }) => void;
 }
 
@@ -912,14 +912,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [pushToast]);
 
   const addCabinet = useCallback(
-    (input: { code: string; name: string; address: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => {
+    (input: { code: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => {
       const code = input.code.trim().toUpperCase();
       const fr = (input.franchiseCode || "").trim().toUpperCase();
       if (!code) { pushToast("กรุณาระบุรหัสตู้", "info"); return; }
       const full = fr ? `${fr}-${code}` : code;
       if (supabaseConfigured) return sbWrite((sb) => repo.addCabinet(sb, { ...input, code, franchiseCode: fr }), `เพิ่มตู้ ${full} แล้ว`, "success");
       if (db.cabinets.some((c) => c.code === code && c.franchiseCode === fr)) { pushToast(`มีตู้ ${full} อยู่แล้ว`, "info"); return; }
-      const cab: Cabinet = { id: uid("cab-"), code, franchiseId: input.franchiseId, franchiseCode: fr, name: input.name.trim() || full, location: { lat: input.lat ?? 13.7563, lng: input.lng ?? 100.5018, address: input.address.trim() }, status: "active", createdAt: todayISO() };
+      const cab: Cabinet = {
+        id: uid("cab-"), code, franchiseId: input.franchiseId, franchiseCode: fr, name: input.name.trim() || full,
+        location: { lat: input.lat ?? 13.7563, lng: input.lng ?? 100.5018, address: input.address.trim() },
+        province: input.province?.trim() || undefined, district: input.district?.trim() || undefined, subdistrict: input.subdistrict?.trim() || undefined,
+        status: "active", createdAt: todayISO(),
+      };
       setDb((d) => ({ ...d, cabinets: [...d.cabinets, cab] }));
       pushToast(`เพิ่มตู้ ${full} แล้ว`, "success");
     },

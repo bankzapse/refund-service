@@ -62,7 +62,7 @@ export function createInitialDB(): DB {
     email: "seller@demo.com",
     lineConnected: true,
     lineUserId: "Uxxxxdemo1",
-    points: 330,
+    points: 33,
     createdAt: new Date(now.getFullYear(), now.getMonth() - 2, 3).toISOString(),
   };
   const seller2: User = {
@@ -72,7 +72,7 @@ export function createInitialDB(): DB {
     phone: "0898887777",
     lineConnected: true,
     lineUserId: "Uxxxxdemo2",
-    points: 200,
+    points: 20,
     createdAt: new Date(now.getFullYear(), now.getMonth() - 1, 12).toISOString(),
   };
   const buyer: User = {
@@ -381,9 +381,9 @@ export function createInitialDB(): DB {
     { id: "fr-bkk", code: "BKK", name: "รีไซเคิลบางกะปิ", ownerName: "คุณวิภา", phone: "0955551111", createdAt: addDays(now, -50).toISOString() },
   ];
   const cabinets: Cabinet[] = [
-    { id: "cab-aa", code: "AA", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Lotus's ลาดพร้าว", location: { lat: 13.8161, lng: 100.5613, address: "โลตัส ลาดพร้าว ชั้น G" }, status: "active", createdAt: addDays(now, -60).toISOString() },
-    { id: "cab-bb", code: "AB", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Big C พระราม 4", location: { lat: 13.7231, lng: 100.5451, address: "บิ๊กซี พระราม 4 หน้าทางเข้า" }, status: "active", createdAt: addDays(now, -45).toISOString() },
-    { id: "cab-cc", code: "AA", franchiseId: "fr-bkk", franchiseCode: "BKK", name: "โลตัส บางกะปิ", location: { lat: 13.7654, lng: 100.6432, address: "โลตัส บางกะปิ ลานจอดรถ" }, status: "active", createdAt: addDays(now, -30).toISOString() },
+    { id: "cab-aa", code: "AA", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Lotus's ลาดพร้าว", location: { lat: 13.8161, lng: 100.5613, address: "โลตัส ลาดพร้าว ชั้น G" }, province: "กรุงเทพมหานคร", district: "จตุจักร", subdistrict: "จอมพล", status: "active", createdAt: addDays(now, -60).toISOString() },
+    { id: "cab-bb", code: "AB", franchiseId: "fr-gln", franchiseCode: "GLN", name: "Big C พระราม 4", location: { lat: 13.7231, lng: 100.5451, address: "บิ๊กซี พระราม 4 หน้าทางเข้า" }, province: "กรุงเทพมหานคร", district: "คลองเตย", subdistrict: "คลองเตย", status: "active", createdAt: addDays(now, -45).toISOString() },
+    { id: "cab-cc", code: "AA", franchiseId: "fr-bkk", franchiseCode: "BKK", name: "โลตัส บางกะปิ", location: { lat: 13.7654, lng: 100.6432, address: "โลตัส บางกะปิ ลานจอดรถ" }, province: "กรุงเทพมหานคร", district: "บางกะปิ", subdistrict: "คลองจั่น", status: "active", createdAt: addDays(now, -30).toISOString() },
   ];
 
   const bagItem = (id: string, qty: number): BagItem => {
@@ -400,7 +400,7 @@ export function createInitialDB(): DB {
     const b: MeshBag = {
       id: uid("bag-"), code, qr: bagQr(cab.franchiseCode, cab.code, code), cabinetId: cab.id, cabinetCode: cab.code,
       userId: user.id, userName: user.name, status,
-      items, valueBaht, points: valueBaht != null ? valueBaht * 10 : undefined,
+      items, valueBaht, points: valueBaht != null ? valueBaht : undefined, // 1 คะแนน = ฿1
       droppedAt: dropped, creditedAt: status === "credited" ? addDays(now, dayOffset + 1).toISOString() : undefined,
     };
     bags.push(b);
@@ -425,19 +425,19 @@ export function createInitialDB(): DB {
     }
   };
   mkPts(seller, [
-    { type: "earn", points: 450, note: "ถุง GLN-AA-0000001", day: -4 },
-    { type: "earn", points: 280, note: "ถุง GLN-AA-0000002", day: -3 },
-    { type: "earn", points: 600, note: "ถุง GLN-AA-0000003", day: -1 },
-    { type: "redeem", points: -1000, note: "แลกเงิน ฿100", day: -1, hour: 20 },
-  ]); // → 330
+    { type: "earn", points: 45, note: "ถุง GLN-AA-0000001", day: -4 },
+    { type: "earn", points: 28, note: "ถุง GLN-AA-0000002", day: -3 },
+    { type: "earn", points: 60, note: "ถุง GLN-AA-0000003", day: -1 },
+    { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: -1, hour: 20 },
+  ]); // → 33
   mkPts(seller2, [
-    { type: "earn", points: 1200, note: "ถุง BKK-AA-0000001", day: -2 },
-    { type: "redeem", points: -1000, note: "แลกเงิน ฿100", day: 0 },
-  ]); // → 200
+    { type: "earn", points: 120, note: "ถุง BKK-AA-0000001", day: -2 },
+    { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: 0 },
+  ]); // → 20
 
   const redemptions: Redemption[] = [
-    { id: uid("r-"), code: "R-3012", userId: seller.id, userName: seller.name, amountBaht: 100, points: 1000, method: "promptpay", account: "0812345678", status: "paid", requestedAt: addDays(now, -1).toISOString(), paidAt: addDays(now, 0).toISOString() },
-    { id: uid("r-"), code: "R-3015", userId: seller2.id, userName: seller2.name, amountBaht: 100, points: 1000, method: "promptpay", account: "0898887777", status: "pending", requestedAt: addDays(now, 0).toISOString() },
+    { id: uid("r-"), code: "R-3012", userId: seller.id, userName: seller.name, amountBaht: 100, points: 100, method: "promptpay", account: "0812345678", status: "paid", requestedAt: addDays(now, -1).toISOString(), paidAt: addDays(now, 0).toISOString() },
+    { id: uid("r-"), code: "R-3015", userId: seller2.id, userName: seller2.name, amountBaht: 100, points: 100, method: "promptpay", account: "0898887777", status: "pending", requestedAt: addDays(now, 0).toISOString() },
   ];
 
   return {

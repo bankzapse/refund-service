@@ -223,6 +223,9 @@ export interface Cabinet {
   franchiseCode: string; // อักษรย่อแฟรนไชส์ เช่น "GLN"
   name: string; // ชื่อจุดตั้ง เช่น "Lotus's ลาดพร้าว"
   location: GeoLocation;
+  province?: string; // จังหวัด
+  district?: string; // อำเภอ/เขต
+  subdistrict?: string; // ตำบล/แขวง
   status: "active" | "full" | "maintenance";
   createdAt: string;
 }

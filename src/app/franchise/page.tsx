@@ -23,12 +23,15 @@ export default function FranchiseDashboard() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [province, setProvince] = useState("");
+  const [district, setDistrict] = useState("");
+  const [subdistrict, setSubdistrict] = useState("");
 
   if (!fr) return <p className="py-16 text-center text-neutral-400">ไม่พบข้อมูลแฟรนไชส์</p>;
 
   const save = () => {
-    addCabinet({ code, name, address, franchiseId: fr.id, franchiseCode: fr.code });
-    setCode(""); setName(""); setAddress(""); setOpen(false);
+    addCabinet({ code, name, address, province, district, subdistrict, franchiseId: fr.id, franchiseCode: fr.code });
+    setCode(""); setName(""); setAddress(""); setProvince(""); setDistrict(""); setSubdistrict(""); setOpen(false);
   };
 
   return (
@@ -113,7 +116,12 @@ export default function FranchiseDashboard() {
                     <p className="font-mono text-sm font-semibold text-brand-700">{cabinetFullCode(c.franchiseCode, c.code)}</p>
                   </div>
                 </div>
-                <p className="flex items-center gap-1 text-xs text-neutral-500"><MapPin className="h-3.5 w-3.5" /> {c.location.address}</p>
+                <div className="text-xs text-neutral-500">
+                  <p className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {c.location.address}</p>
+                  {(c.subdistrict || c.district || c.province) && (
+                    <p className="ml-5 mt-0.5 text-neutral-400">{[c.subdistrict, c.district, c.province].filter(Boolean).join(" · ")}</p>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <span className={`chip ${c.pending > 0 ? "bg-amber-100 text-amber-700" : "bg-neutral-100 text-neutral-500"}`}>
                     <PackageOpen className="h-3.5 w-3.5" /> {c.pending} รอคัดแยก
@@ -157,8 +165,22 @@ export default function FranchiseDashboard() {
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Lotus's รามอินทรา" />
           </div>
           <div>
-            <label className="label">ที่อยู่</label>
+            <label className="label">ที่อยู่ / จุดสังเกต</label>
             <input className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="ชั้น G ทางเข้าหลัก" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="label">จังหวัด</label>
+              <input className="input !px-2" value={province} onChange={(e) => setProvince(e.target.value)} placeholder="กรุงเทพฯ" />
+            </div>
+            <div>
+              <label className="label">อำเภอ/เขต</label>
+              <input className="input !px-2" value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="จตุจักร" />
+            </div>
+            <div>
+              <label className="label">ตำบล/แขวง</label>
+              <input className="input !px-2" value={subdistrict} onChange={(e) => setSubdistrict(e.target.value)} placeholder="จอมพล" />
+            </div>
           </div>
           <p className="text-xs text-neutral-400">QR ถุงจะเป็น <span className="font-mono">{fr.code}-{code.trim().toUpperCase() || "AC"}-0000001</span></p>
         </div>
