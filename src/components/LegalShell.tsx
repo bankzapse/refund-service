@@ -23,7 +23,8 @@ export function LegalShell({ title, subtitle, updated, children }: { title: stri
           <p>GreenDrop (กรีนดรอป) · ดำเนินการโดย บริษัท [ชื่อบริษัท] จำกัด</p>
           <p className="mt-1">
             <Link href="/privacy" className="text-brand-600">นโยบายความเป็นส่วนตัว</Link> ·{" "}
-            <Link href="/terms" className="text-brand-600">ข้อกำหนดการใช้งาน</Link>
+            <Link href="/terms" className="text-brand-600">ข้อกำหนดการใช้งาน</Link> ·{" "}
+            <Link href="/delete-account" className="text-brand-600">ลบบัญชี</Link>
           </p>
         </footer>
       </main>
