@@ -38,6 +38,8 @@ export default function FranchiseCabinetsPage() {
   const [edit, setEdit] = useState<CabinetWithCounts | null>(null);
   const [f, setF] = useState({ ...EMPTY });
 
+  const complete = !!(f.name.trim() && f.address.trim() && f.province && f.district.trim() && f.subdistrict.trim());
+
   if (!fr) return <p className="py-16 text-center text-neutral-400">ไม่พบข้อมูลแฟรนไชส์</p>;
 
   const openAdd = () => { setF({ ...EMPTY }); setAddOpen(true); };
@@ -47,11 +49,12 @@ export default function FranchiseCabinetsPage() {
   };
 
   const saveAdd = () => {
+    if (!complete) return;
     addCabinet({ name: f.name, address: f.address, province: f.province, district: f.district, subdistrict: f.subdistrict, franchiseId: fr.id, franchiseCode: fr.code });
     setAddOpen(false);
   };
   const saveEdit = () => {
-    if (!edit) return;
+    if (!edit || !complete) return;
     editCabinet(edit.id, { name: f.name, address: f.address, province: f.province, district: f.district, subdistrict: f.subdistrict });
     setEdit(null);
   };
@@ -113,13 +116,14 @@ export default function FranchiseCabinetsPage() {
         footer={
           <>
             <button className="btn-outline flex-1" onClick={() => setAddOpen(false)}>ยกเลิก</button>
-            <button className="btn-primary flex-1" onClick={saveAdd}>บันทึก</button>
+            <button className="btn-primary flex-1 disabled:opacity-50" disabled={!complete} onClick={saveAdd}>บันทึก</button>
           </>
         }
       >
         <div className="space-y-3">
           <div className="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700 ring-1 ring-brand-100">รหัสตู้จะถูกกำหนดอัตโนมัติเป็น <b>TK-{String((db.cabinets.map((c) => Number(/^TK0*(\d+)$/.exec(c.code)?.[1] ?? 0)).reduce((a, b) => Math.max(a, b), 0)) + 1).padStart(2, "0")}</b></div>
           <CabinetFields f={f} setF={setF} />
+          {!complete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล) จึงจะเพิ่มตู้ได้</p>}
         </div>
       </Modal>
 
@@ -131,11 +135,14 @@ export default function FranchiseCabinetsPage() {
         footer={
           <>
             <button className="btn-outline flex-1" onClick={() => setEdit(null)}>ยกเลิก</button>
-            <button className="btn-primary flex-1" onClick={saveEdit}>บันทึกการแก้ไข</button>
+            <button className="btn-primary flex-1 disabled:opacity-50" disabled={!complete} onClick={saveEdit}>บันทึกการแก้ไข</button>
           </>
         }
       >
-        <CabinetFields f={f} setF={setF} />
+        <div className="space-y-3">
+          <CabinetFields f={f} setF={setF} />
+          {!complete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่องจึงจะบันทึกได้</p>}
+        </div>
       </Modal>
     </div>
   );

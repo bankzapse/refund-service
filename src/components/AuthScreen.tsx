@@ -9,9 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 import { liffConfigured, getLineProfile, getLiffAccessToken } from "@/lib/liff";
 import { AuthShell } from "@/components/AuthShell";
 import type { Role } from "@/lib/types";
-import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound } from "lucide-react";
+import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound, PackageSearch } from "lucide-react";
 
-export type PortalKey = "seller" | "franchise" | "company";
+export type PortalKey = "seller" | "franchise" | "company" | "center";
 const PHONE_RE = /^0\d{8,9}$/;
 
 interface Portal {
@@ -72,6 +72,20 @@ export const PORTALS: Record<PortalKey, Portal> = {
     allowedRoles: ["admin"],
     demoPhone: "0900000000",
   },
+  center: {
+    key: "center",
+    path: "/login/center",
+    title: "ศูนย์คัดแยก",
+    label: "สำหรับศูนย์คัดแยก",
+    subtitle: "คัดแยก • ตีราคาถุง • ให้คะแนน",
+    icon: <PackageSearch className="h-3.5 w-3.5" />,
+    grad: "from-slate-600 via-slate-700 to-slate-800",
+    badge: "bg-slate-100 text-slate-700",
+    line: false,
+    register: false,
+    allowedRoles: ["buyer"],
+    demoPhone: "0876543210",
+  },
 };
 
 export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
@@ -104,7 +118,7 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
 
   const checkRole = (role: Role) => {
     if (portal.allowedRoles.includes(role)) return true;
-    const owner = PORTALS[(["seller", "franchise", "company"] as PortalKey[]).find((k) => PORTALS[k].allowedRoles.includes(role)) ?? "seller"];
+    const owner = PORTALS[(["seller", "franchise", "company", "center"] as PortalKey[]).find((k) => PORTALS[k].allowedRoles.includes(role)) ?? "seller"];
     setErr(`บัญชีนี้เป็นของ “${owner.title}” — โปรดเข้าที่หน้าเข้าสู่ระบบของ ${owner.title}`);
     return false;
   };

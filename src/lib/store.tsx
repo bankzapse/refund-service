@@ -110,6 +110,7 @@ interface StoreValue {
   submitPayout: (input: { bankName: string; accountNo: string; accountName: string; bookBankImage?: string }) => void;
   reviewPayout: (userId: string, approve: boolean, note?: string) => void;
   payFranchise: (franchiseId: string, amount: number, note?: string) => void;
+  addCenter: (input: { name: string; phone: string; password: string }) => void;
   setCentralPrice: (materialId: string, price: number) => void;
   setDrawPrize: (month: string, prizeName: string, prizeValue: number) => void;
   drawWinner: (month: string) => void;
@@ -934,6 +935,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [currentUser, pushToast],
   );
 
+  // บริษัทสร้างบัญชีศูนย์คัดแยก (buyer) — ตั้งชื่อ+รหัสผ่านเอง ไม่ต้องให้สมัคร
+  const addCenter = useCallback(
+    (input: { name: string; phone: string; password: string }) => {
+      const phone = input.phone.trim();
+      if (!input.name.trim() || !/^0\d{8,9}$/.test(phone) || input.password.length < 4) { pushToast("กรอกชื่อ เบอร์ (10 หลัก) และรหัสผ่าน (≥4) ให้ครบ", "info"); return; }
+      if (db.users.some((u) => u.phone === phone)) { pushToast("เบอร์นี้มีบัญชีอยู่แล้ว", "info"); return; }
+      const user: User = { id: uid("u-"), role: "buyer", name: input.name.trim(), phone, password: input.password, lineConnected: false, credit: 0, partner: true, createdAt: todayISO() };
+      setDb((d) => ({ ...d, users: [...d.users, user] }));
+      pushToast(`เพิ่มศูนย์คัดแยก “${input.name.trim()}” แล้ว`, "success");
+    },
+    [db.users, pushToast],
+  );
+
   // บริษัทโอนส่วนแบ่งให้แฟรนไชส์ (ต้องบัญชีเจ้าของแฟรนไชส์อนุมัติแล้ว)
   const payFranchise = useCallback(
     (franchiseId: string, amount: number, note?: string) => {
@@ -1073,6 +1087,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     submitPayout,
     reviewPayout,
     payFranchise,
+    addCenter,
     addCabinet,
     editCabinet,
     addFranchise,

@@ -7,12 +7,11 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, ReceiptText, Wallet, Tag, LayoutGrid, Plus, Box, Banknote } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Wallet, Tag, LayoutGrid, Plus, Box } from "lucide-react";
 
 const NAV = [
   { href: "/shop", label: "ภาพรวม", icon: LayoutDashboard, exact: true, pickup: true },
-  { href: "/shop/cabinets", label: "ตู้ Drop & Go", icon: Box, pickup: false },
-  { href: "/shop/redemptions", label: "แลกเงิน", icon: Banknote, pickup: false },
+  { href: "/shop/cabinets", label: "ตู้ Drop Bag", icon: Box, pickup: false },
   { href: "/shop/bills", label: "บิลรับซื้อ", icon: ReceiptText, pickup: true },
   { href: "/shop/accounting", label: "บัญชี", icon: Wallet, pickup: true },
   { href: "/shop/prices", label: "ราคา/วัสดุ", icon: Tag, pickup: true },
