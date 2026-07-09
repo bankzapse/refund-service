@@ -35,21 +35,26 @@ export default function AdminDropGoPage() {
           {s.cabinets.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-400">ยังไม่มีตู้</p>
           ) : (
-            <div className="space-y-3">
-              {s.cabinets.map((c) => (
-                <div key={c.id} className="flex items-center gap-3">
-                  <div className="w-28 shrink-0">
-                    <p className="truncate text-sm font-semibold text-neutral-800">{c.name}</p>
-                    <p className="font-mono text-[11px] text-neutral-400">{cabinetFullCode(c.franchiseCode, c.code)}</p>
-                  </div>
-                  <div className="h-6 flex-1 overflow-hidden rounded-full bg-neutral-100">
-                    <div className="flex h-full items-center justify-end rounded-full bg-brand-500 px-2 text-[11px] font-bold text-white" style={{ width: `${Math.max(12, (c.total / maxCab) * 100)}%` }}>
-                      {c.total}
+            <div className="space-y-3.5">
+              {s.cabinets.map((c) => {
+                const area = [c.subdistrict, c.district, c.province].filter(Boolean).join(" · ");
+                return (
+                  <div key={c.id} className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800">
+                        {c.name} <span className="font-mono text-[11px] font-normal text-brand-700">{cabinetFullCode(c.franchiseCode, c.code)}</span>
+                      </p>
+                      {c.pending > 0 && <span className="chip shrink-0 bg-amber-100 text-amber-700">{c.pending} รอ</span>}
+                    </div>
+                    {area && <p className="truncate text-xs text-neutral-400">{area}</p>}
+                    <div className="h-5 overflow-hidden rounded-full bg-neutral-100">
+                      <div className="flex h-full items-center justify-end rounded-full bg-brand-500 px-2 text-[11px] font-bold text-white" style={{ width: `${Math.max(12, (c.total / maxCab) * 100)}%` }}>
+                        {c.total}
+                      </div>
                     </div>
                   </div>
-                  {c.pending > 0 && <span className="chip bg-amber-100 text-amber-700">{c.pending} รอ</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

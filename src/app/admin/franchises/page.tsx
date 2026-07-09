@@ -3,21 +3,38 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
-import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts } from "@/lib/selectors";
+import { AddressPicker } from "@/components/AddressPicker";
+import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts, type FranchiseWithStats } from "@/lib/selectors";
 import { cabinetFullCode } from "@/lib/types";
 import { formatBaht, thaiDate } from "@/lib/utils";
 import { RevenueExport } from "@/components/RevenueExport";
-import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle } from "lucide-react";
+import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle, FileSignature } from "lucide-react";
 
-const NEAR_FULL = 6; // ถุงค้าง ≥ 6 = ใกล้เต็ม (เข้าเก็บ)
-const FULL = 10;
+const NEAR_FULL = 30; // ถุงค้าง ≥ 30 = ใกล้เต็ม (เข้าเก็บ)
+const FULL = 40; // ≥ 40 = เต็ม
+
+type CabForm = { name: string; address: string; province: string; district: string; subdistrict: string };
+const EMPTY_CAB: CabForm = { name: "", address: "", province: "", district: "", subdistrict: "" };
 
 export default function AdminFranchisesPage() {
-  const { db, addFranchise } = useStore();
+  const { db, addFranchise, addCabinet } = useStore();
   const franchises = franchisesWithStats(db);
   const nearFull = cabinetsWithCounts(db)
     .filter((c) => c.pending >= NEAR_FULL)
     .sort((a, b) => b.pending - a.pending);
+
+  // รวมผ่อนค่าสัญญา/ส่วนแบ่งทั้งหมดทุกแฟรนไชส์
+  const totals = franchises.reduce(
+    (acc, f) => {
+      const r = franchiseRevenue(db, f.id);
+      acc.contractRecovered += r.contractRecovered;
+      acc.contractTotal += r.contractTotal;
+      acc.companyShare += r.companyShare;
+      acc.franchiseShare += r.franchiseShare;
+      return acc;
+    },
+    { contractRecovered: 0, contractTotal: 0, companyShare: 0, franchiseShare: 0 },
+  );
 
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -30,16 +47,49 @@ export default function AdminFranchisesPage() {
     setCode(""); setName(""); setOwnerName(""); setPhone(""); setOpen(false);
   };
 
+  // เพิ่มตู้ (บริษัทเท่านั้น — ผูกกับสัญญาเช่าซื้อ)
+  const [cabFor, setCabFor] = useState<FranchiseWithStats | null>(null);
+  const [cab, setCab] = useState<CabForm>({ ...EMPTY_CAB });
+  const cabComplete = !!(cab.name.trim() && cab.address.trim() && cab.province && cab.district.trim() && cab.subdistrict.trim());
+  const nextTk = "TK-" + String(db.cabinets.map((c) => Number(/^TK0*(\d+)$/.exec(c.code)?.[1] ?? 0)).reduce((a, b) => Math.max(a, b), 0) + 1).padStart(2, "0");
+  const openAddCab = (f: FranchiseWithStats) => { setCab({ ...EMPTY_CAB }); setCabFor(f); };
+  const saveCab = () => {
+    if (!cabFor || !cabComplete) return;
+    addCabinet({ name: cab.name, address: cab.address, province: cab.province, district: cab.district, subdistrict: cab.subdistrict, franchiseId: cabFor.id, franchiseCode: cabFor.code });
+    setCabFor(null);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">จัดการแฟรนไชส์</h1>
-          <p className="text-sm text-neutral-500">{franchises.length} แฟรนไชส์ · รหัสตู้ = อักษรย่อแฟรนไชส์-ตู้ (เช่น GLN-AA)</p>
+          <p className="text-sm text-neutral-500">{franchises.length} แฟรนไชส์ · รหัสตู้กำหนดอัตโนมัติ (TK-01, TK-02, …)</p>
         </div>
         <div className="flex items-center gap-2">
           <RevenueExport size="md" />
           <button onClick={() => setOpen(true)} className="btn-primary !px-4 !py-2.5 text-sm"><Plus className="h-4 w-4" /> เพิ่มแฟรนไชส์</button>
+        </div>
+      </div>
+
+      {/* รวมผ่อนค่าสัญญา / ส่วนแบ่งทั้งหมด */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="card flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-sm text-neutral-500"><FileSignature className="h-4 w-4 text-amber-500" /> ผ่อนค่าสัญญารวมทั้งหมด</div>
+          <p className="text-2xl font-extrabold leading-tight text-neutral-800">฿{formatBaht(totals.contractRecovered)} <span className="text-sm font-medium text-neutral-400">/ ฿{formatBaht(totals.contractTotal)}</span></p>
+          <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full rounded-full bg-amber-500" style={{ width: `${totals.contractTotal ? Math.min(100, Math.round((totals.contractRecovered / totals.contractTotal) * 100)) : 0}%` }} />
+          </div>
+        </div>
+        <div className="card flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-sm text-neutral-500"><Building2 className="h-4 w-4 text-brand-600" /> บริษัทได้รวมทั้งหมด</div>
+          <p className="text-2xl font-extrabold leading-tight text-neutral-800">฿{formatBaht(totals.companyShare)}</p>
+          <p className="text-xs text-neutral-400">ส่วนแบ่งบริษัทจากทุกแฟรนไชส์</p>
+        </div>
+        <div className="card flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-sm text-neutral-500"><Wallet className="h-4 w-4 text-brand-600" /> แฟรนไชส์ได้รวมทั้งหมด</div>
+          <p className="text-2xl font-extrabold leading-tight text-brand-700">฿{formatBaht(totals.franchiseShare)}</p>
+          <p className="text-xs text-neutral-400">ส่วนแบ่งแฟรนไชส์จากทุกแฟรนไชส์</p>
         </div>
       </div>
 
@@ -54,6 +104,7 @@ export default function AdminFranchisesPage() {
           <div className="space-y-2">
             {nearFull.map((c) => {
               const full = c.pending >= FULL;
+              const area = [c.subdistrict, c.district, c.province].filter(Boolean).join(" · ");
               return (
                 <div key={c.id} className="flex items-center gap-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
                   <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${full ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
@@ -61,7 +112,7 @@ export default function AdminFranchisesPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-neutral-800">{c.name} <span className="font-mono font-normal text-brand-700">{cabinetFullCode(c.franchiseCode, c.code)}</span></p>
-                    <p className="text-xs text-neutral-400">{c.location.address}</p>
+                    <p className="truncate text-xs text-neutral-400">{c.location.address}{area && ` · ${area}`}</p>
                   </div>
                   <div className="w-28 shrink-0">
                     <div className="mb-0.5 flex justify-between text-[11px] text-neutral-400"><span>ถุงค้าง</span><span className="font-semibold">{c.pending}</span></div>
@@ -116,6 +167,7 @@ export default function AdminFranchisesPage() {
                 </div>
               );
             })()}
+            <button onClick={() => openAddCab(f)} className="btn-outline mt-1 w-full !py-2 text-sm"><Plus className="h-4 w-4" /> เพิ่มตู้ให้แฟรนไชส์นี้</button>
           </div>
         ))}
         {franchises.length === 0 && (
@@ -125,6 +177,7 @@ export default function AdminFranchisesPage() {
         )}
       </div>
 
+      {/* เพิ่มแฟรนไชส์ */}
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -155,7 +208,37 @@ export default function AdminFranchisesPage() {
               <input className="input" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08x-xxx-xxxx" />
             </div>
           </div>
-          <p className="text-xs text-neutral-400">รหัสตู้จะขึ้นต้นด้วย <span className="font-mono">{code.trim().toUpperCase() || "GLN"}-</span> เช่น <span className="font-mono">{code.trim().toUpperCase() || "GLN"}-AA-0000001</span></p>
+          <p className="text-xs text-neutral-400">รหัสตู้ของแฟรนไชส์กำหนดอัตโนมัติเป็น <span className="font-mono">TK-01, TK-02, …</span> (บริษัทเป็นผู้เพิ่มตู้ตามสัญญาเช่าซื้อ)</p>
+        </div>
+      </Modal>
+
+      {/* เพิ่มตู้ (บริษัทเท่านั้น) */}
+      <Modal
+        open={!!cabFor}
+        onClose={() => setCabFor(null)}
+        title={cabFor ? `เพิ่มตู้ให้แฟรนไชส์ ${cabFor.code}` : "เพิ่มตู้"}
+        footer={
+          <>
+            <button className="btn-outline flex-1" onClick={() => setCabFor(null)}>ยกเลิก</button>
+            <button className="btn-primary flex-1 disabled:opacity-50" disabled={!cabComplete} onClick={saveCab}>บันทึก</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700 ring-1 ring-amber-100">
+            <FileSignature className="mr-1 inline h-3.5 w-3.5" /> ตู้ผูกกับสัญญาเช่าซื้อ — บริษัทเป็นผู้เพิ่มให้แฟรนไชส์เท่านั้น
+          </div>
+          <div className="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700 ring-1 ring-brand-100">รหัสตู้จะถูกกำหนดอัตโนมัติเป็น <b>{nextTk}</b></div>
+          <div>
+            <label className="label">ชื่อจุดตั้ง</label>
+            <input className="input" value={cab.name} onChange={(e) => setCab({ ...cab, name: e.target.value })} placeholder="Lotus's รามอินทรา" />
+          </div>
+          <div>
+            <label className="label">ที่อยู่ / จุดสังเกต</label>
+            <input className="input" value={cab.address} onChange={(e) => setCab({ ...cab, address: e.target.value })} placeholder="ชั้น G ทางเข้าหลัก" />
+          </div>
+          <AddressPicker province={cab.province} district={cab.district} subdistrict={cab.subdistrict} onChange={(v) => setCab({ ...cab, ...v })} />
+          {!cabComplete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล) จึงจะเพิ่มตู้ได้</p>}
         </div>
       </Modal>
     </div>
