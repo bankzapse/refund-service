@@ -15,20 +15,24 @@ const PORTALS = [
   { id: "u-buyer", label: "ศูนย์คัดแยก", desc: "คัดแยก · ตีราคาถุง", dest: "/shop", icon: Store, grad: "from-slate-600 to-slate-700" },
 ];
 
+// ปิด demo bypass เมื่อมี backend จริง (Supabase) หรือสั่งปิดชัดเจนด้วย NEXT_PUBLIC_DEMO=off
+const DEMO_DISABLED = supabaseConfigured || process.env.NEXT_PUBLIC_DEMO === "off";
+
 export default function AppChooser() {
   const { ready, loginAs } = useStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (supabaseConfigured && ready) router.replace("/login");
+    if (DEMO_DISABLED && ready) router.replace("/login");
   }, [ready, router]);
 
   const enter = (id: string, dest: string) => {
+    if (DEMO_DISABLED) return;
     loginAs(id);
     router.push(dest);
   };
 
-  if (supabaseConfigured) {
+  if (DEMO_DISABLED) {
     return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
   }
 

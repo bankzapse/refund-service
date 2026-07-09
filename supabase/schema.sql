@@ -29,6 +29,13 @@ create table if not exists profiles (
   credit         numeric not null default 0,        -- เครดิตพาร์ทเนอร์ (ต้อง ≥ 300 ถึงรับงาน)
   partner        boolean not null default false,    -- เป็นพาร์ทเนอร์โรงงาน (ได้อัตราเลท)
   points         numeric not null default 0,        -- คะแนนสะสม Drop & Go (คนทิ้ง)
+  owner          boolean not null default false,     -- เจ้าของระบบ (super admin) — สิทธิ์ทุกเมนู
+  permissions    text[] not null default '{}',       -- สิทธิ์เข้าถึงเมนู (ผู้ดูแลที่บริษัทเพิ่ม)
+  franchise_id   uuid,                               -- แฟรนไชส์ที่ผู้ใช้ role=franchise เป็นเจ้าของ
+  address        text,                               -- ที่อยู่ / จุดสังเกต (ศูนย์คัดแยก)
+  province       text,                               -- จังหวัด (ศูนย์คัดแยก)
+  district       text,                               -- อำเภอ/เขต (ศูนย์คัดแยก)
+  subdistrict    text,                               -- ตำบล/แขวง (ศูนย์คัดแยก)
   created_at     timestamptz not null default now()
 );
 
@@ -432,6 +439,7 @@ create table if not exists cabinets (
   franchise_id uuid references franchises(id) on delete set null, franchise_code text,
   name text not null,
   lat double precision, lng double precision, address text,
+  province text, district text, subdistrict text,   -- พื้นที่ตู้
   status text not null default 'active', created_at timestamptz not null default now()
 );
 create unique index if not exists cabinets_fr_code_uidx on cabinets(franchise_code, code);

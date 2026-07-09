@@ -21,6 +21,8 @@ function ForgotForm() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [otpToken, setOtpToken] = useState<string | null>(null);
+  const [smsMode, setSmsMode] = useState(false); // true = ส่ง OTP จริงผ่าน SMS OK
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState("");
@@ -34,6 +36,21 @@ function ForgotForm() {
       const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone) });
       setBusy(false);
       if (error) return setErr(error.message);
+      setSmsMode(true);
+      return setStep(2);
+    }
+    // ส่ง OTP จริงผ่าน SMS OK (ถ้าตั้งค่าไว้) — ไม่งั้นเข้าโหมดทดลอง
+    setBusy(true);
+    try {
+      const r = await fetch("/api/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
+      const j = await r.json();
+      setBusy(false);
+      if (!r.ok || j.ok === false) return setErr(j.error ?? "ส่งรหัส OTP ไม่สำเร็จ");
+      setSmsMode(!!j.configured);
+      setOtpToken(j.token ?? null);
+    } catch {
+      setBusy(false);
+      return setErr("เชื่อมต่อไม่สำเร็จ ลองอีกครั้ง");
     }
     setStep(2);
   };
@@ -46,6 +63,15 @@ function ForgotForm() {
       const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
       setBusy(false);
       if (error) return setErr(error.message);
+      return setStep(3);
+    }
+    if (smsMode) {
+      setBusy(true);
+      const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
+        .then((r) => r.json())
+        .catch(() => ({ ok: false }));
+      setBusy(false);
+      if (!v.ok) return setErr("รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
     }
     setStep(3);
   };
@@ -87,7 +113,7 @@ function ForgotForm() {
           <div className="mb-1 text-lg font-bold text-neutral-800">ยืนยันเบอร์โทร</div>
           <p className="mb-4 text-sm text-neutral-500">ส่งรหัส OTP 6 หลักไปที่ <span className="font-semibold text-neutral-700">{phone}</span></p>
           <input className="input tracking-[0.5em] text-center text-lg" inputMode="numeric" maxLength={6} placeholder="______" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} onKeyDown={(e) => e.key === "Enter" && verifyOtp()} />
-          {!supabaseConfigured && <p className="mt-1.5 text-xs text-brand-600">🔐 โหมดทดลอง: กรอกเลขอะไรก็ได้ 6 หลัก</p>}
+          {!smsMode && <p className="mt-1.5 text-xs text-brand-600">🔐 โหมดทดลอง: กรอกเลขอะไรก็ได้ 6 หลัก</p>}
           {err && <p className="mt-2 text-sm text-red-500">{err}</p>}
           <button className="btn-primary mt-3 w-full" onClick={verifyOtp} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "ยืนยัน OTP"}
