@@ -189,21 +189,18 @@ export const MAX_BAGS_PER_DROP = 10;
  * QR บนถุง = "GLN-AA-0000001" → อักษรย่อแฟรนไชส์ (GLN) - รหัสตู้ (AA) - รหัสถุง (0000001)
  * สแกนครั้งเดียวได้ทั้งแฟรนไชส์ ตู้ และถุง (ลดขั้นตอน)
  */
-export function bagQr(franchiseCode: string, cabinetCode: string, bagCode: string): string {
-  const fr = (franchiseCode || "").toUpperCase();
-  const cab = (cabinetCode || "").toUpperCase();
-  return fr ? `${fr}-${cab}-${bagCode}` : `${cab}-${bagCode}`;
+// QR ถุง = "<รหัสตู้>-<ถุง>" เช่น TK01-0000001 (รหัสตู้ TK รันทั้งระบบ ไม่ต้องมีอักษรย่อแฟรนไชส์)
+export function bagQr(_franchiseCode: string, cabinetCode: string, bagCode: string): string {
+  return `${(cabinetCode || "").toUpperCase()}-${bagCode}`;
 }
-/** รหัสตู้แบบเต็ม = "GLN-AA" (แฟรนไชส์-ตู้) */
 /** แสดงรหัสตู้แบบมีขีด เช่น TK01 → TK-01 (ตัวโค้ดจริงไม่มีขีด เพื่อไม่ให้ QR แตก) */
 export function displayCabinetCode(code: string): string {
   const m = /^(TK)0*(\d+)$/i.exec(code || "");
   return m ? `${m[1].toUpperCase()}-${m[2].padStart(2, "0")}` : (code || "").toUpperCase();
 }
-export function cabinetFullCode(franchiseCode: string, cabinetCode: string): string {
-  const fr = (franchiseCode || "").toUpperCase();
-  const cab = (cabinetCode || "").toUpperCase();
-  return fr ? `${fr}-${cab}` : cab;
+/** รหัสตู้แบบแสดงผล = TK-01 (ตัดอักษรย่อแฟรนไชส์ออก) */
+export function cabinetFullCode(_franchiseCode: string, cabinetCode: string): string {
+  return displayCabinetCode(cabinetCode);
 }
 /** แยกแฟรนไชส์/ตู้/ถุงจาก QR — รองรับ GLN-AA-0000001, AA1-0000001, และของเดิม #TH-AA-0000001 */
 export function parseBagQr(raw: string): { franchise: string; cabinet: string; bag: string } {

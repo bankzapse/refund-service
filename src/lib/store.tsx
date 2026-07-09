@@ -36,8 +36,8 @@ function profileToUser(p: any): User {
   };
 }
 
-const DB_KEY = "rf_db_v13";
-const USER_KEY = "rf_user_v13";
+const DB_KEY = "rf_db_v14";
+const USER_KEY = "rf_user_v14";
 
 type Toast = { id: string; text: string; kind: "success" | "info" | "line" };
 

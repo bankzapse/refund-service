@@ -428,14 +428,14 @@ export function createInitialDB(): DB {
     }
   };
   mkPts(seller, [
-    { type: "earn", points: 45, note: "ถุง GLN-TK01-0000001", day: -4 },
-    { type: "earn", points: 28, note: "ถุง GLN-TK01-0000002", day: -3 },
-    { type: "earn", points: 60, note: "ถุง GLN-TK01-0000003", day: -1 },
+    { type: "earn", points: 45, note: "ถุง TK01-0000001", day: -4 },
+    { type: "earn", points: 28, note: "ถุง TK01-0000002", day: -3 },
+    { type: "earn", points: 60, note: "ถุง TK01-0000003", day: -1 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: -1, hour: 20 },
     { type: "adjust", points: 500, note: "โบนัสทดสอบระบบ", day: 0 },
   ]); // → 533
   mkPts(seller2, [
-    { type: "earn", points: 120, note: "ถุง BKK-TK03-0000001", day: -2 },
+    { type: "earn", points: 120, note: "ถุง TK03-0000001", day: -2 },
     { type: "redeem", points: -100, note: "แลกเงิน ฿100", day: 0 },
   ]); // → 20
 

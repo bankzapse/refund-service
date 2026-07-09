@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { cabinetsWithCounts, dropGoSummary } from "@/lib/selectors";
-import { cabinetFullCode, displayCabinetCode } from "@/lib/types";
+import { displayCabinetCode } from "@/lib/types";
 import { formatBaht } from "@/lib/utils";
 import { Box, MapPin, PackageOpen, PackageCheck, Coins, ChevronRight, Inbox } from "lucide-react";
 
@@ -35,16 +35,19 @@ export default function CabinetsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold text-neutral-800">{c.name}</p>
-                <p className="font-mono text-xs font-semibold text-brand-700">{displayCabinetCode(c.code)} · {cabinetFullCode(c.franchiseCode, c.code)}</p>
+                <p className="font-mono text-xs font-semibold text-brand-700">{displayCabinetCode(c.code)}</p>
               </div>
               <ChevronRight className="h-5 w-5 text-neutral-300" />
             </div>
             <p className="flex items-center gap-1 text-xs text-neutral-500">
               <MapPin className="h-3.5 w-3.5" /> {c.location.address}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <span className={`chip ${c.pending > 0 ? "bg-amber-100 text-amber-700" : "bg-neutral-100 text-neutral-500"}`}>
                 <PackageOpen className="h-3.5 w-3.5" /> {c.pending} รอคัดแยก
+              </span>
+              <span className="chip bg-brand-100 text-brand-700">
+                <PackageCheck className="h-3.5 w-3.5" /> {c.credited} คัดแยกแล้ว
               </span>
               <span className="chip bg-neutral-100 text-neutral-500">{c.total} ถุงรวม</span>
             </div>

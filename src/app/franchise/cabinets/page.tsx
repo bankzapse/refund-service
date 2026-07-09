@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
 import { AddressPicker } from "@/components/AddressPicker";
 import { franchiseById, cabinetsForFranchise, type CabinetWithCounts } from "@/lib/selectors";
-import { cabinetFullCode, displayCabinetCode } from "@/lib/types";
+import { displayCabinetCode } from "@/lib/types";
 import { Box, PackageOpen, Plus, MapPin, QrCode, Printer, Store, Pencil } from "lucide-react";
 
 type Form = { name: string; address: string; province: string; district: string; subdistrict: string };
@@ -64,7 +64,7 @@ export default function FranchiseCabinetsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">รหัสตู้ของคุณ</h1>
-          <p className="text-sm text-neutral-500">{cabinets.length} ตู้ · รหัสตู้กำหนดอัตโนมัติ (TK-01, TK-02, …) · QR = <span className="font-mono">{fr.code}-ตู้-ถุง</span></p>
+          <p className="text-sm text-neutral-500">{cabinets.length} ตู้ · รหัสตู้กำหนดอัตโนมัติ (TK-01, TK-02, …) · QR = <span className="font-mono">TK01-ถุง</span></p>
         </div>
         <button onClick={openAdd} className="btn-primary !px-4 !py-2.5 text-sm"><Plus className="h-4 w-4" /> เพิ่มตู้</button>
       </div>
@@ -81,7 +81,7 @@ export default function FranchiseCabinetsPage() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700"><Box className="h-6 w-6" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-neutral-800">{c.name}</p>
-                  <p className="font-mono text-sm font-semibold text-brand-700">{displayCabinetCode(c.code)} <span className="text-neutral-400">· {cabinetFullCode(c.franchiseCode, c.code)}</span></p>
+                  <p className="font-mono text-sm font-semibold text-brand-700">{displayCabinetCode(c.code)}</p>
                 </div>
                 <button onClick={() => openEdit(c)} className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600" aria-label="แก้ไข"><Pencil className="h-4 w-4" /></button>
               </div>
@@ -105,7 +105,7 @@ export default function FranchiseCabinetsPage() {
         </div>
       )}
       <p className="flex items-center gap-1 text-xs text-neutral-400">
-        <QrCode className="h-3.5 w-3.5" /> QR ถุง = <span className="font-mono">{fr.code}-TK01-0000001</span> (แฟรนไชส์-ตู้-ถุง) · คนทิ้งสแกนครั้งเดียวได้ทั้งตู้และถุง
+        <QrCode className="h-3.5 w-3.5" /> QR ถุง = <span className="font-mono">TK01-0000001</span> (ตู้-ถุง) · คนทิ้งสแกนครั้งเดียวได้ทั้งตู้และถุง
       </p>
 
       {/* เพิ่มตู้ */}

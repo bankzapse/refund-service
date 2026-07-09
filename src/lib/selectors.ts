@@ -313,12 +313,18 @@ export function bagsForCabinet(db: DB, cabinetId: string): MeshBag[] {
 }
 export interface CabinetWithCounts extends Cabinet {
   pending: number; // ถุงที่ยังไม่ได้ให้คะแนน
+  credited: number; // ถุงที่คัดแยก+ให้คะแนนแล้ว
   total: number;
 }
 export function cabinetsWithCounts(db: DB): CabinetWithCounts[] {
   return (db.cabinets ?? []).map((c) => {
     const bags = (db.bags ?? []).filter((b) => b.cabinetId === c.id);
-    return { ...c, pending: bags.filter((b) => b.status !== "credited").length, total: bags.length };
+    return {
+      ...c,
+      pending: bags.filter((b) => b.status !== "credited").length,
+      credited: bags.filter((b) => b.status === "credited").length,
+      total: bags.length,
+    };
   });
 }
 export function pointsLedger(db: DB, userId: string): PointTxn[] {

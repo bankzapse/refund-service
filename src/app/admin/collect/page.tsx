@@ -78,7 +78,7 @@ export default function AdminCollectPage() {
                       </td>
                       <td className="px-4 py-3 text-neutral-500">
                         <span className="block">{c.location.address}</span>
-                        {(c.subdistrict || c.district) && <span className="text-xs text-neutral-400">{[c.subdistrict, c.district].filter(Boolean).join(" · ")}</span>}
+                        {(c.subdistrict || c.district || c.province) && <span className="text-xs text-neutral-400">{[c.subdistrict, c.district, c.province].filter(Boolean).join(" · ")}</span>}
                       </td>
                       <td className="px-4 py-3 text-neutral-600">
                         <span className="font-mono text-xs text-brand-700">{c.franchiseCode}</span>
