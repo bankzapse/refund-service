@@ -114,7 +114,13 @@ npm run open:ios          # หรือ npm run open:android
 ### ทดสอบ
 เปิดแอป native (ล็อกอินแล้ว) → อนุญาตแจ้งเตือน → เรียก `POST /api/push/test` (เช่น จาก devtools) → ควรได้ push "ทดสอบการแจ้งเตือน 🎉"
 
-### ส่งอัตโนมัติตอนมีเหตุการณ์ (ทำต่อได้)
-`sendToUser(userId, title, body)` พร้อมใช้ — ผูกกับเหตุการณ์ได้ 2 ทาง:
-- **Supabase Database Webhook** on `point_transactions` / `redemptions` INSERT → POST หา endpoint ที่เรียก `sendToUser` (แนะนำ — server-side ล้วน)
-- หรือเรียกจาก API route หลัง action สำเร็จ (เช่น หลังบริษัทกดจ่ายเงินแลก → แจ้งผู้ขาย)
+### ส่งอัตโนมัติตอนมีเหตุการณ์ (ต่อไว้แล้ว → `POST /api/push/hook`)
+ตั้ง **Supabase Database Webhook** 2 ตัว (Database → Webhooks → Create) ชี้มาที่
+`https://<domain>/api/push/hook` + เพิ่ม HTTP header **`x-webhook-secret`** = ค่า env **`PUSH_HOOK_SECRET`**:
+
+| Webhook | Table | Events | ผล |
+|---|---|---|---|
+| ได้รับคะแนน | `point_transactions` | **Insert** | แจ้งผู้ขาย "ได้รับ X คะแนน" (เฉพาะ type=earn) |
+| เงินโอนแล้ว | `redemptions` | **Update** | แจ้งผู้ขาย "โอนเงิน ฿X แล้ว" (เมื่อ status→paid) |
+
+> endpoint กันปลอมด้วย `x-webhook-secret` · ถ้าไม่ตั้ง `FCM_SERVICE_ACCOUNT_JSON` จะข้ามเงียบ ๆ (ไม่พัง)
