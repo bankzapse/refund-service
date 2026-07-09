@@ -36,8 +36,8 @@ function profileToUser(p: any): User {
   };
 }
 
-const DB_KEY = "rf_db_v14";
-const USER_KEY = "rf_user_v14";
+const DB_KEY = "rf_db_v15";
+const USER_KEY = "rf_user_v15";
 
 type Toast = { id: string; text: string; kind: "success" | "info" | "line" };
 
@@ -111,6 +111,9 @@ interface StoreValue {
   reviewPayout: (userId: string, approve: boolean, note?: string) => void;
   payFranchise: (franchiseId: string, amount: number, note?: string) => void;
   addCenter: (input: { name: string; phone: string; password: string }) => void;
+  addAdmin: (input: { name: string; phone: string; password: string; permissions: string[] }) => void;
+  removeAdmin: (userId: string) => void;
+  setAdminPermissions: (userId: string, permissions: string[]) => void;
   setCentralPrice: (materialId: string, price: number) => void;
   setDrawPrize: (month: string, prizeName: string, prizeValue: number) => void;
   drawWinner: (month: string) => void;
@@ -935,6 +938,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [currentUser, pushToast],
   );
 
+  // owner เพิ่มผู้ดูแล (admin) + กำหนดสิทธิ์เมนู
+  const addAdmin = useCallback(
+    (input: { name: string; phone: string; password: string; permissions: string[] }) => {
+      const phone = input.phone.trim();
+      if (!input.name.trim() || !/^0\d{8,9}$/.test(phone) || input.password.length < 4) { pushToast("กรอกชื่อ เบอร์ (10 หลัก) และรหัสผ่าน (≥4) ให้ครบ", "info"); return; }
+      if (db.users.some((u) => u.phone === phone)) { pushToast("เบอร์นี้มีบัญชีอยู่แล้ว", "info"); return; }
+      const user: User = { id: uid("u-"), role: "admin", name: input.name.trim(), phone, password: input.password, lineConnected: false, permissions: input.permissions, createdAt: todayISO() };
+      setDb((d) => ({ ...d, users: [...d.users, user] }));
+      pushToast(`เพิ่มผู้ดูแล “${input.name.trim()}” แล้ว`, "success");
+    },
+    [db.users, pushToast],
+  );
+  const removeAdmin = useCallback(
+    (userId: string) => {
+      setDb((d) => ({ ...d, users: d.users.filter((u) => !(u.id === userId && u.role === "admin" && !u.owner)) }));
+      pushToast("ลบผู้ดูแลแล้ว", "info");
+    },
+    [pushToast],
+  );
+  const setAdminPermissions = useCallback(
+    (userId: string, permissions: string[]) => {
+      setDb((d) => ({ ...d, users: d.users.map((u) => (u.id === userId && u.role === "admin" && !u.owner ? { ...u, permissions } : u)) }));
+      pushToast("อัปเดตสิทธิ์แล้ว", "success");
+    },
+    [pushToast],
+  );
+
   // บริษัทสร้างบัญชีศูนย์คัดแยก (buyer) — ตั้งชื่อ+รหัสผ่านเอง ไม่ต้องให้สมัคร
   const addCenter = useCallback(
     (input: { name: string; phone: string; password: string }) => {
@@ -1088,6 +1118,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     reviewPayout,
     payFranchise,
     addCenter,
+    addAdmin,
+    removeAdmin,
+    setAdminPermissions,
     addCabinet,
     editCabinet,
     addFranchise,

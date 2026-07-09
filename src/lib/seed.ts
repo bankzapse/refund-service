@@ -106,11 +106,22 @@ export function createInitialDB(): DB {
   const admin: User = {
     id: "u-admin",
     role: "admin",
-    name: "ผู้ดูแลระบบ",
+    name: "เจ้าของระบบ (Owner)",
     phone: "0900000000",
     email: "admin@demo.com",
     lineConnected: false,
+    owner: true,
     createdAt: new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString(),
+  };
+  const admin2: User = {
+    id: "u-admin2",
+    role: "admin",
+    name: "ผู้ดูแล (การเงิน)",
+    phone: "0900000001",
+    password: "123456",
+    lineConnected: false,
+    permissions: ["payouts", "payments", "transfers"],
+    createdAt: new Date(now.getFullYear(), now.getMonth() - 1, 5).toISOString(),
   };
   const franchiseOwner: User = {
     id: "u-franchise",
@@ -445,7 +456,7 @@ export function createInitialDB(): DB {
   ];
 
   return {
-    users: [seller, seller2, buyer, buyer2, admin, franchiseOwner],
+    users: [seller, seller2, buyer, buyer2, admin, admin2, franchiseOwner],
     jobs,
     slots,
     tickets,

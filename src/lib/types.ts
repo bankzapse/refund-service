@@ -106,6 +106,8 @@ export interface User {
   email?: string;
   password?: string; // โหมดเดโม (localStorage) เท่านั้น — Supabase ใช้ auth ของตัวเอง
   payout?: PayoutAccount; // บัญชีรับเงินโอน (ต้องบริษัทอนุมัติก่อนทำธุรกรรม)
+  owner?: boolean; // เจ้าของระบบ (super admin) — มีสิทธิ์ทุกเมนู + จัดการผู้ดูแล
+  permissions?: string[]; // สิทธิ์เข้าถึงเมนู (สำหรับผู้ดูแลที่บริษัทเพิ่ม) — owner ไม่ต้องมี
   lineUserId?: string;
   lineConnected: boolean;
   baseLat?: number; // ตำแหน่งฐานคนขับ (ใช้คำนวณรัศมี 30 กม.)
