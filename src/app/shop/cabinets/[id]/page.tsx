@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
-import { bagsForCabinet } from "@/lib/selectors";
-import { MATERIALS, MATERIAL_MAP } from "@/lib/materials";
+import { bagsForCabinet, centralPrice } from "@/lib/selectors";
+import { MATERIALS } from "@/lib/materials";
 import { BAG_STATUS_META, POINTS_PER_BAHT, cabinetFullCode } from "@/lib/types";
 import type { MeshBag, BagItem } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
-import { ArrowLeft, Box, Coins, Scale, PackageOpen, CheckCircle2, Trophy, Printer } from "lucide-react";
+import { ArrowLeft, Box, Coins, Scale, PackageOpen, CheckCircle2, Trophy } from "lucide-react";
 
 export default function CabinetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,9 +36,10 @@ export default function CabinetDetailPage() {
     if (b.status === "dropped") startSorting(b.id);
   };
 
-  const items: BagItem[] = MATERIALS.filter((m) => (qty[m.id] || 0) > 0).map((m) => ({
-    materialId: m.id, name: m.name, qty: qty[m.id], pricePerUnit: m.pricePerUnit, subtotal: Math.round(m.pricePerUnit * qty[m.id]),
-  }));
+  const items: BagItem[] = MATERIALS.filter((m) => (qty[m.id] || 0) > 0).map((m) => {
+    const price = centralPrice(db, m.id);
+    return { materialId: m.id, name: m.name, qty: qty[m.id], pricePerUnit: price, subtotal: Math.round(price * qty[m.id]) };
+  });
   const value = items.reduce((s, i) => s + i.subtotal, 0);
   const points = value * POINTS_PER_BAHT;
 
@@ -61,9 +62,6 @@ export default function CabinetDetailPage() {
           <h1 className="text-2xl font-bold text-neutral-800">{cab.name}</h1>
           <p className="text-sm text-neutral-500"><span className="font-mono font-semibold text-brand-700">{cabinetFullCode(cab.franchiseCode, cab.code)}</span> · {cab.location.address}</p>
         </div>
-        <Link href={`/shop/cabinets/${cab.id}/qr`} className="btn-outline !px-4 !py-2.5 text-sm">
-          <Printer className="h-4 w-4" /> พิมพ์ QR ตู้+ถุง
-        </Link>
       </div>
 
       {/* pending queue */}
@@ -147,7 +145,7 @@ export default function CabinetDetailPage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-base">{m.emoji}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-neutral-700">{m.name}</p>
-                <p className="text-[11px] text-neutral-400">฿{formatBaht(m.pricePerUnit)}/กก.</p>
+                <p className="text-[11px] text-neutral-400">฿{formatBaht(centralPrice(db, m.id))}/กก.</p>
               </div>
               <div className="relative w-24">
                 <input

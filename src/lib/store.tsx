@@ -110,7 +110,7 @@ interface StoreValue {
   submitPayout: (input: { bankName: string; accountNo: string; accountName: string; bookBankImage?: string }) => void;
   reviewPayout: (userId: string, approve: boolean, note?: string) => void;
   payFranchise: (franchiseId: string, amount: number, note?: string) => void;
-  addCenter: (input: { name: string; phone: string; password: string }) => void;
+  addCenter: (input: { name: string; phone: string; password: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   addAdmin: (input: { name: string; phone: string; password: string; permissions: string[] }) => void;
   removeAdmin: (userId: string) => void;
   setAdminPermissions: (userId: string, permissions: string[]) => void;
@@ -967,11 +967,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // บริษัทสร้างบัญชีศูนย์คัดแยก (buyer) — ตั้งชื่อ+รหัสผ่านเอง ไม่ต้องให้สมัคร
   const addCenter = useCallback(
-    (input: { name: string; phone: string; password: string }) => {
+    (input: { name: string; phone: string; password: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
       const phone = input.phone.trim();
       if (!input.name.trim() || !/^0\d{8,9}$/.test(phone) || input.password.length < 4) { pushToast("กรอกชื่อ เบอร์ (10 หลัก) และรหัสผ่าน (≥4) ให้ครบ", "info"); return; }
       if (db.users.some((u) => u.phone === phone)) { pushToast("เบอร์นี้มีบัญชีอยู่แล้ว", "info"); return; }
-      const user: User = { id: uid("u-"), role: "buyer", name: input.name.trim(), phone, password: input.password, lineConnected: false, credit: 0, partner: true, createdAt: todayISO() };
+      const user: User = {
+        id: uid("u-"), role: "buyer", name: input.name.trim(), phone, password: input.password, lineConnected: false, credit: 0, partner: true, createdAt: todayISO(),
+        address: input.address?.trim() || undefined, province: input.province || undefined, district: input.district?.trim() || undefined, subdistrict: input.subdistrict?.trim() || undefined,
+      };
       setDb((d) => ({ ...d, users: [...d.users, user] }));
       pushToast(`เพิ่มศูนย์คัดแยก “${input.name.trim()}” แล้ว`, "success");
     },

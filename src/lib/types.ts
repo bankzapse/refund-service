@@ -112,6 +112,10 @@ export interface User {
   lineConnected: boolean;
   baseLat?: number; // ตำแหน่งฐานคนขับ (ใช้คำนวณรัศมี 30 กม.)
   baseLng?: number;
+  address?: string; // ที่อยู่ / จุดสังเกต (ศูนย์คัดแยก)
+  province?: string; // จังหวัด (ศูนย์คัดแยก)
+  district?: string; // อำเภอ/เขต (ศูนย์คัดแยก)
+  subdistrict?: string; // ตำบล/แขวง (ศูนย์คัดแยก)
   status?: "active" | "suspended"; // สถานะบัญชี (แอดมินจัดการ) — ไม่ระบุ = active
   credit?: number; // เครดิตของผู้รับซื้อ (พาร์ทเนอร์) — ต้อง ≥ 300 ถึงรับงานได้
   partner?: boolean; // เป็นพาร์ทเนอร์กับโรงงานแล้ว (ได้อัตราเลท)

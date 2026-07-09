@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
 import { AddressPicker } from "@/components/AddressPicker";
-import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts, type FranchiseWithStats } from "@/lib/selectors";
-import { cabinetFullCode } from "@/lib/types";
+import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts, cabinetsForFranchise, type FranchiseWithStats } from "@/lib/selectors";
+import { cabinetFullCode, displayCabinetCode } from "@/lib/types";
 import { formatBaht, thaiDate } from "@/lib/utils";
 import { RevenueExport } from "@/components/RevenueExport";
-import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle, FileSignature } from "lucide-react";
+import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle, FileSignature, Printer, QrCode, MapPin } from "lucide-react";
 
 const NEAR_FULL = 30; // ถุงค้าง ≥ 30 = ใกล้เต็ม (เข้าเก็บ)
 const FULL = 40; // ≥ 40 = เต็ม
@@ -53,6 +54,10 @@ export default function AdminFranchisesPage() {
   const cabComplete = !!(cab.name.trim() && cab.address.trim() && cab.province && cab.district.trim() && cab.subdistrict.trim());
   const nextTk = "TK-" + String(db.cabinets.map((c) => Number(/^TK0*(\d+)$/.exec(c.code)?.[1] ?? 0)).reduce((a, b) => Math.max(a, b), 0) + 1).padStart(2, "0");
   const openAddCab = (f: FranchiseWithStats) => { setCab({ ...EMPTY_CAB }); setCabFor(f); };
+
+  // พิมพ์ QR ตู้ของแฟรนไชส์ (บริษัทพิมพ์ให้ได้)
+  const [qrFor, setQrFor] = useState<FranchiseWithStats | null>(null);
+  const qrCabinets = qrFor ? cabinetsForFranchise(db, qrFor.id) : [];
   const saveCab = () => {
     if (!cabFor || !cabComplete) return;
     addCabinet({ name: cab.name, address: cab.address, province: cab.province, district: cab.district, subdistrict: cab.subdistrict, franchiseId: cabFor.id, franchiseCode: cabFor.code });
@@ -167,7 +172,10 @@ export default function AdminFranchisesPage() {
                 </div>
               );
             })()}
-            <button onClick={() => openAddCab(f)} className="btn-outline mt-1 w-full !py-2 text-sm"><Plus className="h-4 w-4" /> เพิ่มตู้ให้แฟรนไชส์นี้</button>
+            <div className="mt-1 flex gap-2">
+              <button onClick={() => setQrFor(f)} className="btn-outline flex-1 !py-2 text-sm"><QrCode className="h-4 w-4" /> ตู้ & QR</button>
+              <button onClick={() => openAddCab(f)} className="btn-outline flex-1 !py-2 text-sm"><Plus className="h-4 w-4" /> เพิ่มตู้</button>
+            </div>
           </div>
         ))}
         {franchises.length === 0 && (
@@ -240,6 +248,34 @@ export default function AdminFranchisesPage() {
           <AddressPicker province={cab.province} district={cab.district} subdistrict={cab.subdistrict} onChange={(v) => setCab({ ...cab, ...v })} />
           {!cabComplete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล) จึงจะเพิ่มตู้ได้</p>}
         </div>
+      </Modal>
+
+      {/* ตู้ของแฟรนไชส์ + พิมพ์ QR */}
+      <Modal
+        open={!!qrFor}
+        onClose={() => setQrFor(null)}
+        title={qrFor ? `ตู้ของแฟรนไชส์ ${qrFor.code} (${qrCabinets.length})` : "ตู้ของแฟรนไชส์"}
+        footer={<button className="btn-outline w-full" onClick={() => setQrFor(null)}>ปิด</button>}
+      >
+        {qrCabinets.length === 0 ? (
+          <p className="py-8 text-center text-sm text-neutral-400">แฟรนไชส์นี้ยังไม่มีตู้ — กด “เพิ่มตู้”</p>
+        ) : (
+          <div className="space-y-2">
+            {qrCabinets.map((c) => {
+              const area = [c.subdistrict, c.district, c.province].filter(Boolean).join(" · ");
+              return (
+                <div key={c.id} className="flex items-center gap-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><Box className="h-4 w-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-neutral-800">{c.name} <span className="font-mono font-normal text-brand-700">{displayCabinetCode(c.code)}</span></p>
+                    <p className="flex items-center gap-1 truncate text-xs text-neutral-400"><MapPin className="h-3 w-3 shrink-0" /> {c.location.address}{area && ` · ${area}`}</p>
+                  </div>
+                  <Link href={`/admin/cabinets/${c.id}/qr`} className="btn-primary shrink-0 !px-3 !py-2 text-xs"><Printer className="h-3.5 w-3.5" /> พิมพ์ QR</Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Modal>
     </div>
   );
