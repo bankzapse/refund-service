@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentUser) router.replace("/");
+    if (!currentUser) router.replace("/app");
     else if (currentUser.role !== "admin") router.replace("/home");
     else if (!PICKUP_ENABLED && pathname === "/admin") router.replace("/admin/dropgo");
   }, [ready, currentUser, router, pathname]);
@@ -43,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const doLogout = () => {
     logout();
-    router.replace("/");
+    router.replace("/app");
   };
 
   return (
@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <span className="hidden text-sm text-white/60 lg:block">{currentUser.name}</span>
-            <Link href="/" className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-white/70 hover:bg-white/10">
+            <Link href="/app" className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-white/70 hover:bg-white/10">
               <LayoutGrid className="h-4 w-4" /> <span className="hidden sm:inline">สลับระบบ</span>
             </Link>
             <button onClick={doLogout} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-white/70 hover:bg-white/10">

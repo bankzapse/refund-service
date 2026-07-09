@@ -25,7 +25,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentUser) router.replace("/");
+    if (!currentUser) router.replace("/app");
     else if (currentUser.role !== "buyer") router.replace("/home");
     else if (currentUser.status === "suspended") router.replace("/home");
     // Drop-only: หน้าภาพรวม (บิล) ปิดอยู่ → เด้งไปหน้าตู้
@@ -70,7 +70,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
                 <Plus className="h-4 w-4" /> สร้างบิล
               </Link>
             )}
-            <Link href="/" className="btn-ghost !px-2 !py-2 text-sm !text-white/85 hover:!bg-white/10">
+            <Link href="/app" className="btn-ghost !px-2 !py-2 text-sm !text-white/85 hover:!bg-white/10">
               <LayoutGrid className="h-4 w-4" /> <span className="hidden sm:inline">สลับระบบ</span>
             </Link>
           </div>

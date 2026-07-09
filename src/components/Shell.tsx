@@ -11,6 +11,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const desktop =
     pathname === "/" ||
+    pathname === "/app" ||
     pathname.startsWith("/shop") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/franchise") ||
