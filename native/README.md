@@ -94,3 +94,27 @@ npm run open:ios          # หรือ npm run open:android
 - [ ] Data safety form: ดู [`../STORE_PRIVACY.md`](../STORE_PRIVACY.md) ส่วน A
 - [ ] Privacy Policy URL + Account deletion URL (`/delete-account`)
 - [ ] Build `.aab` (Android Studio → Generate Signed Bundle) → upload → Internal testing → Production
+
+---
+
+## Push Notification (Capacitor + FCM)
+โค้ดต่อไว้แล้ว: `src/lib/native.ts → registerPush()` (เรียกอัตโนมัติใน `initNativeApp`) ·
+เก็บ token ที่ `POST /api/push/register` · ส่งจากเซิร์ฟเวอร์ด้วย `src/lib/push.ts → sendToUser()` (FCM HTTP v1)
+
+### ต้องตั้งค่า (ครั้งเดียว)
+1. **Firebase project** (console.firebase.google.com) — สร้าง/ใช้โปรเจกต์เดียวกับที่จะใช้ FCM
+2. **Android**: เพิ่มแอป Android (package `co.thungkhiao.app`) → ดาวน์โหลด **`google-services.json`** → วางที่ `native/android/app/google-services.json` → `npm run sync`
+3. **iOS (APNs)**:
+   - เพิ่มแอป iOS ใน Firebase (bundle `co.thungkhiao.app`) → ดาวน์โหลด **`GoogleService-Info.plist`** → วางใน `native/ios/App/App/`
+   - Apple Developer → สร้าง **APNs Auth Key (.p8)** → อัปโหลดใน Firebase → Project Settings → Cloud Messaging → Apple app configuration
+   - Xcode → target App → Signing & Capabilities → **+ Push Notifications** + **Background Modes → Remote notifications**
+4. **Server (Vercel env)**: Firebase → Project Settings → **Service accounts → Generate new private key** → เอาเนื้อ JSON ทั้งก้อนใส่ env **`FCM_SERVICE_ACCOUNT_JSON`**
+5. รัน migration `supabase/migrations/20260709000002_device_tokens.sql` (หรือ schema.sql มีให้แล้ว)
+
+### ทดสอบ
+เปิดแอป native (ล็อกอินแล้ว) → อนุญาตแจ้งเตือน → เรียก `POST /api/push/test` (เช่น จาก devtools) → ควรได้ push "ทดสอบการแจ้งเตือน 🎉"
+
+### ส่งอัตโนมัติตอนมีเหตุการณ์ (ทำต่อได้)
+`sendToUser(userId, title, body)` พร้อมใช้ — ผูกกับเหตุการณ์ได้ 2 ทาง:
+- **Supabase Database Webhook** on `point_transactions` / `redemptions` INSERT → POST หา endpoint ที่เรียก `sendToUser` (แนะนำ — server-side ล้วน)
+- หรือเรียกจาก API route หลัง action สำเร็จ (เช่น หลังบริษัทกดจ่ายเงินแลก → แจ้งผู้ขาย)

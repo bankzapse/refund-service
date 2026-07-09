@@ -75,6 +75,37 @@ async function openExternal(url: string) {
   }
 }
 
+/**
+ * ลงทะเบียนรับ Push Notification (@capacitor/push-notifications)
+ * ขอสิทธิ์ → register → ได้ token (FCM/APNs) → ส่งไปเก็บที่ /api/push/register (ผูกกับ user ที่ล็อกอิน)
+ * ใช้ได้เฉพาะแอป native · บนเว็บ = no-op
+ */
+export async function registerPush(): Promise<void> {
+  const PN = plugin("PushNotifications");
+  if (!PN) return;
+  try {
+    let perm = await PN.checkPermissions?.();
+    if (perm?.receive !== "granted") perm = await PN.requestPermissions?.();
+    if (perm?.receive !== "granted") return;
+
+    PN.addListener?.("registration", async (t: { value: string }) => {
+      try {
+        await fetch("/api/push/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: t.value, platform: nativePlatform() }),
+        });
+      } catch {
+        /* ผู้ใช้ยังไม่ล็อกอิน/เน็ตหลุด — ข้ามไป */
+      }
+    });
+    PN.addListener?.("registrationError", () => {});
+    await PN.register?.();
+  } catch {
+    /* ignore */
+  }
+}
+
 let initialized = false;
 
 /**
@@ -91,6 +122,9 @@ export function initNativeApp(): void {
 
   P.SplashScreen?.hide?.();
   P.StatusBar?.setStyle?.({ style: "LIGHT" }); // header เขียว/ขาว → ให้ status bar อ่านง่าย
+
+  // ลงทะเบียน push (ถ้าล็อกอินแล้ว token จะผูกกับ user) — เรียกซ้ำได้หลังล็อกอินด้วย
+  registerPush();
 
   // ปุ่ม back ฮาร์ดแวร์ (Android)
   P.App?.addListener?.("backButton", (info: { canGoBack?: boolean }) => {
