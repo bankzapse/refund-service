@@ -3,7 +3,7 @@
 import { createClient } from "./server";
 
 function configured() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY));
 }
 const NOT_CONFIGURED = { error: "ยังไม่ได้ตั้งค่า Supabase (ดู SUPABASE_SETUP.md)" };
 
