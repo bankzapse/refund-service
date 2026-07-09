@@ -12,7 +12,8 @@ const config: CapacitorConfig = {
   appName: "ถุงเขียว",
   webDir: "public", // placeholder (โหลดจริงจาก server.url) แต่ Capacitor ต้องมี
   server: {
-    url: "https://app.thungkhiao.co", // โดเมน production ของเว็บ
+    // โหลดเว็บ production — ตอนนี้ใช้ URL Vercel · เปลี่ยนเป็นโดเมนจริงเมื่อจดโดเมนแล้ว (เช่น https://app.thungkhiao.co)
+    url: "https://thung-kheow.vercel.app",
     cleartext: false,
     androidScheme: "https",
     iosScheme: "https",
