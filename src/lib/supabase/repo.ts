@@ -24,6 +24,7 @@ function toUser(p: any): User {
     status: p.status ?? "active", credit: p.credit != null ? Number(p.credit) : 0, partner: !!p.partner,
     points: p.points != null ? Number(p.points) : 0,
     owner: !!p.owner, permissions: p.permissions ?? undefined, franchiseId: p.franchise_id ?? undefined,
+    payout: p.payout ?? undefined,
     address: p.address ?? undefined, province: p.province ?? undefined, district: p.district ?? undefined, subdistrict: p.subdistrict ?? undefined,
     createdAt: p.created_at,
   };
@@ -71,7 +72,7 @@ function toExpense(e: any): Expense {
 
 /** โหลดข้อมูลทั้งหมดที่ user เห็น (RLS คัดกรองให้) → รูป DB */
 export async function loadAll(sb: any): Promise<DB> {
-  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet, cabs, meshBags, bagItems, pointTxns, redemptions, franchises] =
+  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet, cabs, meshBags, bagItems, pointTxns, redemptions, franchises, franchisePayoutsRes] =
     await Promise.all([
       sb.from("profiles").select("*"),
       sb.from("material_prices").select("*"),
@@ -92,6 +93,7 @@ export async function loadAll(sb: any): Promise<DB> {
       sb.from("point_transactions").select("*"),
       sb.from("redemptions").select("*"),
       sb.from("franchises").select("*"),
+      sb.from("franchise_payouts").select("*"),
     ]);
 
   const userRows: any[] = users.data ?? [];
@@ -161,7 +163,7 @@ export async function loadAll(sb: any): Promise<DB> {
     })(),
     pointTxns: (pointTxns.data ?? []).map(toPointTxn),
     redemptions: (redemptions.data ?? []).map((r: any) => toRedemption(r, nameById)),
-    franchisePayouts: [],
+    franchisePayouts: (franchisePayoutsRes.data ?? []).map((r: any) => ({ id: r.id, franchiseId: r.franchise_id ?? "", franchiseName: r.franchise_name ?? "", amount: Number(r.amount), note: r.note ?? undefined, paidAt: r.paid_at })),
     pricesUpdatedAt: todayISO(),
   };
 }
@@ -248,6 +250,13 @@ export const editCabinet = (sb: any, id: string, patch: { name?: string; address
   }).eq("id", id);
 export const addFranchise = (sb: any, input: { code: string; name: string; ownerName: string; phone: string }) =>
   sb.rpc("add_franchise", { p_code: input.code, p_name: input.name, p_owner: input.ownerName, p_phone: input.phone });
+
+/* ---------------- franchise payout ---------------- */
+export const submitPayout = (sb: any, payout: Record<string, unknown>) => sb.rpc("submit_payout", { p_payout: payout });
+export const reviewPayout = (sb: any, userId: string, approve: boolean, note?: string) =>
+  sb.rpc("review_payout", { p_user: userId, p_approve: approve, p_note: note ?? null });
+export const payFranchise = (sb: any, franchiseId: string, amount: number, note?: string) =>
+  sb.rpc("pay_franchise", { p_franchise_id: franchiseId, p_amount: amount, p_note: note ?? null });
 
 // อ้างอิงเพื่อกัน unused ในบางเส้นทาง
 export const _unused = { ticketNumber };

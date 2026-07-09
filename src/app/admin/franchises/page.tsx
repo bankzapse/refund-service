@@ -42,10 +42,11 @@ export default function AdminFranchisesPage() {
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
 
   const save = () => {
-    addFranchise({ code, name, ownerName, phone });
-    setCode(""); setName(""); setOwnerName(""); setPhone(""); setOpen(false);
+    addFranchise({ code, name, ownerName, phone, password });
+    setCode(""); setName(""); setOwnerName(""); setPhone(""); setPassword(""); setOpen(false);
   };
 
   // เพิ่มตู้ (บริษัทเท่านั้น — ผูกกับสัญญาเช่าซื้อ)
@@ -212,10 +213,15 @@ export default function AdminFranchisesPage() {
               <input className="input" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="คุณเอกชัย" />
             </div>
             <div>
-              <label className="label">เบอร์โทร</label>
-              <input className="input" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08x-xxx-xxxx" />
+              <label className="label">เบอร์โทร (ใช้เข้าระบบ)</label>
+              <input className="input" inputMode="numeric" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} placeholder="08x-xxx-xxxx" />
             </div>
           </div>
+          <div>
+            <label className="label">รหัสผ่านเจ้าของแฟรนไชส์</label>
+            <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="อย่างน้อย 4 ตัวอักษร" />
+          </div>
+          <p className="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">สร้างบัญชีเข้าระบบให้เจ้าของแฟรนไชส์ด้วย — เข้าที่ <span className="font-mono">/login/franchise</span> ด้วยเบอร์ + รหัสผ่านนี้</p>
           <p className="text-xs text-neutral-400">รหัสตู้ของแฟรนไชส์กำหนดอัตโนมัติเป็น <span className="font-mono">TK-01, TK-02, …</span> (บริษัทเป็นผู้เพิ่มตู้ตามสัญญาเช่าซื้อ)</p>
         </div>
       </Modal>

@@ -34,6 +34,18 @@ export async function POST(req: Request) {
 
   try {
     switch (action) {
+      case "createFranchise": {
+        const { code, name, ownerName, phone, password } = body;
+        if (!code?.trim() || !/^0\d{8,9}$/.test(String(phone || "").trim()) || String(password || "").length < 4) return bad("ข้อมูลไม่ครบ");
+        const frName = String(name || code).trim();
+        const owner = String(ownerName || frName).trim();
+        const { data: fr, error: eF } = await table("franchises").insert({ code: String(code).toUpperCase(), name: frName, owner_name: owner, phone: String(phone).trim() }).select("id").single();
+        if (eF || !fr) return bad(/duplicate|unique/i.test(eF?.message ?? "") ? "อักษรย่อแฟรนไชส์นี้มีแล้ว" : (eF?.message ?? "สร้างแฟรนไชส์ไม่สำเร็จ"));
+        const { data: created, error } = await admin.auth.admin.createUser({ phone: toE164(phone), password, phone_confirm: true, user_metadata: { name: owner, role: "franchise" } });
+        if (error || !created?.user) { await table("franchises").delete().eq("id", fr.id); return bad(error?.message ?? "สร้างบัญชีเจ้าของไม่สำเร็จ"); }
+        await table("profiles").update({ role: "franchise", name: owner, franchise_id: fr.id }).eq("id", created.user.id);
+        return NextResponse.json({ ok: true, id: fr.id });
+      }
       case "createCenter": {
         const { name, phone, password, address, province, district, subdistrict } = body;
         if (!name?.trim() || !/^0\d{8,9}$/.test(String(phone || "").trim()) || String(password || "").length < 4) return bad("ข้อมูลไม่ครบ");

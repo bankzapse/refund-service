@@ -137,7 +137,7 @@ interface StoreValue {
   rejectRedemption: (id: string) => void;
   addCabinet: (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
   editCabinet: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
-  addFranchise: (input: { code: string; name: string; ownerName: string; phone: string }) => void;
+  addFranchise: (input: { code: string; name: string; ownerName: string; phone: string; password?: string }) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -948,6 +948,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const submitPayout = useCallback(
     (input: { bankName: string; accountNo: string; accountName: string; bookBankImage?: string }) => {
       if (!currentUser) return;
+      if (supabaseConfigured)
+        return sbWrite(
+          (sb) => repo.submitPayout(sb, { bankName: input.bankName.trim(), accountNo: input.accountNo.trim(), accountName: input.accountName.trim(), bookBankImage: input.bookBankImage ?? currentUser.payout?.bookBankImage }),
+          "ส่งข้อมูลบัญชีแล้ว — รอบริษัทอนุมัติ",
+          "success",
+        );
       const payout: PayoutAccount = {
         bankName: input.bankName.trim(),
         accountNo: input.accountNo.trim(),
@@ -959,7 +965,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setDb((d) => ({ ...d, users: d.users.map((u) => (u.id === currentUser.id ? { ...u, payout } : u)) }));
       pushToast("ส่งข้อมูลบัญชีแล้ว — รอบริษัทอนุมัติ", "success");
     },
-    [currentUser, pushToast],
+    [currentUser, pushToast, sbWrite],
   );
 
   // owner เพิ่มผู้ดูแล (admin) + กำหนดสิทธิ์เมนู
@@ -1054,19 +1060,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (franchiseId: string, amount: number, note?: string) => {
       const fr = db.franchises.find((f) => f.id === franchiseId);
       if (!fr) return;
+      if (!(amount > 0)) { pushToast("ระบุจำนวนเงินให้ถูกต้อง", "info"); return; }
+      if (supabaseConfigured) return sbWrite((sb) => repo.payFranchise(sb, franchiseId, amount, note), `โอนส่วนแบ่ง ฿${amount.toLocaleString()} ให้ ${fr.name} แล้ว`, "success");
       const owner = db.users.find((u) => u.role === "franchise" && u.franchiseId === franchiseId);
       if (owner?.payout?.status !== "approved") { pushToast("แฟรนไชส์ยังไม่ได้ยืนยันบัญชีรับเงิน (รออนุมัติ)", "info"); return; }
-      if (!(amount > 0)) { pushToast("ระบุจำนวนเงินให้ถูกต้อง", "info"); return; }
       const rec: FranchisePayout = { id: uid("fp-"), franchiseId, franchiseName: fr.name, amount, note: note?.trim() || undefined, paidAt: todayISO() };
       setDb((d) => ({ ...d, franchisePayouts: [rec, ...(d.franchisePayouts ?? [])] }));
       pushToast(`โอนส่วนแบ่ง ฿${amount.toLocaleString()} ให้ ${fr.name} แล้ว`, "success");
     },
-    [db.franchises, db.users, pushToast],
+    [db.franchises, db.users, pushToast, sbWrite],
   );
 
   // บริษัทอนุมัติ/ปฏิเสธบัญชีรับเงิน
   const reviewPayout = useCallback(
     (userId: string, approve: boolean, note?: string) => {
+      if (supabaseConfigured) return sbWrite((sb) => repo.reviewPayout(sb, userId, approve, note), approve ? "อนุมัติบัญชีรับเงินแล้ว" : "ปฏิเสธบัญชีรับเงิน", approve ? "success" : "info");
       setDb((d) => ({
         ...d,
         users: d.users.map((u) =>
@@ -1077,7 +1085,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
       pushToast(approve ? "อนุมัติบัญชีรับเงินแล้ว" : "ปฏิเสธบัญชีรับเงิน", approve ? "success" : "info");
     },
-    [pushToast],
+    [pushToast, sbWrite],
   );
 
   const addCabinet = useCallback(
@@ -1130,16 +1138,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addFranchise = useCallback(
-    (input: { code: string; name: string; ownerName: string; phone: string }) => {
+    (input: { code: string; name: string; ownerName: string; phone: string; password?: string }) => {
       const code = input.code.trim().toUpperCase();
       if (!code) { pushToast("กรุณาระบุอักษรย่อแฟรนไชส์", "info"); return; }
-      if (supabaseConfigured) return sbWrite((sb) => repo.addFranchise(sb, { ...input, code }), `เพิ่มแฟรนไชส์ ${code} แล้ว`, "success");
+      if (supabaseConfigured) {
+        // สร้างแฟรนไชส์ + บัญชีเข้าระบบเจ้าของแฟรนไชส์ (role=franchise) ผ่าน service-role
+        if (!/^0\d{8,9}$/.test(input.phone.trim()) || (input.password ?? "").length < 4) { pushToast("กรอกเบอร์เจ้าของ (10 หลัก) + รหัสผ่าน (≥4) ให้ครบ", "info"); return; }
+        adminUsersApi("createFranchise", { code, name: input.name.trim() || code, ownerName: input.ownerName.trim(), phone: input.phone.trim(), password: input.password }, `เพิ่มแฟรนไชส์ ${code} + บัญชีเจ้าของแล้ว`);
+        return;
+      }
       if (db.franchises.some((f) => f.code === code)) { pushToast(`มีแฟรนไชส์ ${code} อยู่แล้ว`, "info"); return; }
       const f: Franchise = { id: uid("fr-"), code, name: input.name.trim() || code, ownerName: input.ownerName.trim(), phone: input.phone.trim(), createdAt: todayISO() };
       setDb((d) => ({ ...d, franchises: [...d.franchises, f] }));
       pushToast(`เพิ่มแฟรนไชส์ ${code} แล้ว`, "success");
     },
-    [db.franchises, pushToast],
+    [db.franchises, pushToast, adminUsersApi],
   );
 
   const value: StoreValue = {
