@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { Logo } from "@/components/Logo";
-import { BootLoader } from "@/components/ui";
+import { BootLoader, ConsoleSkeleton } from "@/components/ui";
 import { LayoutDashboard, ReceiptText, Wallet, Tag, LogOut, LayoutGrid, Plus, Box } from "lucide-react";
 
 const NAV = [
@@ -32,7 +32,8 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
     else if (!PICKUP_ENABLED && pathname === "/shop") router.replace("/shop/cabinets");
   }, [ready, currentUser, router, pathname]);
 
-  if (!ready || !currentUser || currentUser.role !== "buyer") {
+  if (!ready) return <ConsoleSkeleton />;
+  if (!currentUser || currentUser.role !== "buyer") {
     return <BootLoader />;
   }
 

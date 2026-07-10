@@ -230,6 +230,44 @@ export function AppSkeleton() {
   );
 }
 
+/** โครงหน้าคอนโซล (บริษัท/แฟรนไชส์/ศูนย์) ระหว่างโหลด — header + sidebar + เนื้อหา */
+export function ConsoleSkeleton() {
+  return (
+    <div className="min-h-dvh bg-neutral-100">
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-brand-700 via-brand-600 to-emerald-600 shadow-sm">
+        <div className="flex h-14 items-center gap-3 px-4">
+          <Skeleton className="h-8 w-8 rounded-lg bg-white/30" />
+          <Skeleton className="h-4 w-44 bg-white/30" />
+        </div>
+        <nav className="flex gap-2 border-t border-white/10 bg-white px-3 py-2 md:hidden">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-7 w-20 shrink-0 rounded-lg" />
+          ))}
+        </nav>
+      </header>
+      <div className="flex">
+        <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 flex-col gap-2 border-r border-neutral-200 bg-white px-3 py-4 md:flex">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-xl" />
+          ))}
+        </aside>
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
+          <div className="mx-auto max-w-6xl space-y-5">
+            <Skeleton className="h-7 w-56" />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-2xl" />
+              ))}
+            </div>
+            <Skeleton className="h-3.5 w-32" />
+            <SkeletonList rows={4} />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Toaster ---------------- */
 export function Toaster() {
   const { toasts, dismissToast } = useStore();

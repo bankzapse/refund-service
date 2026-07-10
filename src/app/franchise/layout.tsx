@@ -7,7 +7,7 @@ import { franchiseById } from "@/lib/selectors";
 import { cn } from "@/lib/utils";
 import { LogOut, LayoutDashboard, Box, PackageOpen, FileText, Landmark, Banknote, LayoutGrid } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { BootLoader } from "@/components/ui";
+import { BootLoader, ConsoleSkeleton } from "@/components/ui";
 import Link from "next/link";
 
 const NAV = [
@@ -30,7 +30,8 @@ export default function FranchiseLayout({ children }: { children: React.ReactNod
     else if (currentUser.role !== "franchise") router.replace("/home");
   }, [ready, currentUser, router]);
 
-  if (!ready || !currentUser || currentUser.role !== "franchise") {
+  if (!ready) return <ConsoleSkeleton />;
+  if (!currentUser || currentUser.role !== "franchise") {
     return <BootLoader />;
   }
 
