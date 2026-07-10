@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { AppHeader } from "@/components/AppHeader";
-import { StatusBadge, Stepper, Modal } from "@/components/ui";
+import { StatusBadge, Stepper, Modal, Spinner } from "@/components/ui";
 import { STATUS_META } from "@/lib/types";
 import { MATERIAL_MAP } from "@/lib/materials";
 import { formatBaht, thaiDate, thaiDateTime } from "@/lib/utils";
@@ -47,7 +47,9 @@ export default function JobDetailPage() {
   };
 
   // ปิดงาน = ออกบิลอัตโนมัติ (เชื่อมไปยังระบบร้าน B + GMV แอดมิน C + สิทธิ์ผู้ขาย)
+  const [finishing, setFinishing] = useState(false);
   const finishWithBill = async () => {
+    if (finishing) return;
     const amt = Number(amount) || 0;
     const priced = job.items.map((it) => {
       const price = buyerPrice(db, u.id, it.materialId);
@@ -58,15 +60,22 @@ export default function JobDetailPage() {
       priced.length > 0 && sum === amt
         ? priced
         : [{ materialId: "mixed", name: "ของเก่า (เหมารวม)", unit: "เหมา", qty: 1, pricePerUnit: amt, subtotal: amt }];
-    await createBill({
-      source: "app_job",
-      jobId: job.id,
-      sellerName: job.contactName || job.sellerName,
-      sellerPhone: job.contactPhone,
-      items,
-      paymentMethod: payMethod,
-    });
-    setShowComplete(false);
+    setFinishing(true);
+    try {
+      await createBill({
+        source: "app_job",
+        jobId: job.id,
+        sellerName: job.contactName || job.sellerName,
+        sellerPhone: job.contactPhone,
+        items,
+        paymentMethod: payMethod,
+      });
+      setShowComplete(false); // ปิดเฉพาะเมื่อออกบิลสำเร็จ (error → store โชว์ toast แล้ว)
+    } catch {
+      /* error toast แสดงจาก store แล้ว — เปิด modal ไว้ให้ลองใหม่ */
+    } finally {
+      setFinishing(false);
+    }
   };
 
   return (
@@ -198,9 +207,9 @@ export default function JobDetailPage() {
         title="ปิดงาน & บันทึกยอดจริง"
         footer={
           <>
-            <button className="btn-outline flex-1" onClick={() => setShowComplete(false)}>ยกเลิก</button>
-            <button className="btn-primary flex-1" onClick={finishWithBill}>
-              ยืนยันปิดงาน & ออกบิล
+            <button className="btn-outline flex-1" onClick={() => setShowComplete(false)} disabled={finishing}>ยกเลิก</button>
+            <button className="btn-primary flex-1" onClick={finishWithBill} disabled={finishing}>
+              {finishing ? <Spinner className="h-4 w-4" /> : "ยืนยันปิดงาน & ออกบิล"}
             </button>
           </>
         }

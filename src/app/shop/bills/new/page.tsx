@@ -7,6 +7,7 @@ import { MATERIALS, MATERIAL_MAP } from "@/lib/materials";
 import { buyerPrice, billableJobs, creditOf } from "@/lib/selectors";
 import { computeSettlement, feeRateLabel, MIN_CREDIT } from "@/lib/fees";
 import { PromptPayQR } from "@/components/PromptPayQR";
+import { Spinner } from "@/components/ui";
 import { formatBaht, thaiDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Store, UserPlus, Save } from "lucide-react";
@@ -56,22 +57,30 @@ export default function NewBillPage() {
 
   const credit = creditOf(db, u.id);
 
+  const [saving, setSaving] = useState(false);
   const save = async () => {
+    if (saving) return;
     setErr("");
     if (credit < MIN_CREDIT) return setErr(`เครดิตไม่พอ (฿${formatBaht(credit)}) — ต้องมี ≥ ฿${MIN_CREDIT} จึงจะออกบิลได้ เติมเครดิตก่อน`);
     const valid = items.filter((i) => i.qty > 0);
     if (source === "app_job" && !jobId) return setErr("กรุณาเลือกงานจากแอป");
     if (source === "walk_in" && !sellerName.trim()) return setErr("กรุณากรอกชื่อผู้ขาย");
     if (valid.length === 0) return setErr("กรุณาเพิ่มรายการอย่างน้อย 1 รายการ (ใส่จำนวน)");
-    const bill = await createBill({
-      source,
-      jobId: source === "app_job" ? jobId : undefined,
-      sellerName: sellerName.trim() || "ลูกค้า",
-      sellerPhone: sellerPhone.trim(),
-      items: valid,
-      paymentMethod: method,
-    });
-    router.replace(`/shop/bill/${bill.id}`);
+    setSaving(true);
+    try {
+      const bill = await createBill({
+        source,
+        jobId: source === "app_job" ? jobId : undefined,
+        sellerName: sellerName.trim() || "ลูกค้า",
+        sellerPhone: sellerPhone.trim(),
+        items: valid,
+        paymentMethod: method,
+      });
+      router.replace(`/shop/bill/${bill.id}`); // ไปหน้าบิลเฉพาะเมื่อสำเร็จ
+    } catch {
+      setErr("ออกบิลไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setSaving(false); // สำเร็จ = redirect ออกไปแล้ว จึงไม่ต้อง reset
+    }
   };
 
   return (
@@ -204,8 +213,8 @@ export default function NewBillPage() {
               )}
             </div>
             {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
-            <button onClick={save} className="btn-primary mt-4 w-full">
-              <Save className="h-4 w-4" /> บันทึกบิล & จ่ายเงิน
+            <button onClick={save} disabled={saving} className="btn-primary mt-4 w-full">
+              {saving ? <Spinner className="h-4 w-4" /> : <><Save className="h-4 w-4" /> บันทึกบิล & จ่ายเงิน</>}
             </button>
           </div>
         </div>

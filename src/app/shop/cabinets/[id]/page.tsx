@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useStore } from "@/lib/store";
-import { Modal } from "@/components/ui";
+import { Modal, Spinner } from "@/components/ui";
 import { bagsForCabinet, centralPrice } from "@/lib/selectors";
 import { MATERIALS } from "@/lib/materials";
 import { BAG_STATUS_META, POINTS_PER_BAHT, cabinetFullCode } from "@/lib/types";
@@ -43,10 +43,13 @@ export default function CabinetDetailPage() {
   const value = items.reduce((s, i) => s + i.subtotal, 0);
   const points = value * POINTS_PER_BAHT;
 
-  const confirm = () => {
-    if (!valuing || items.length === 0) return;
-    valueBag(valuing.id, items);
-    setValuing(null);
+  const [valuingBusy, setValuingBusy] = useState(false);
+  const confirm = async () => {
+    if (!valuing || items.length === 0 || valuingBusy) return;
+    setValuingBusy(true);
+    const ok = await valueBag(valuing.id, items);
+    setValuingBusy(false);
+    if (ok) setValuing(null); // ปิดเฉพาะเมื่อตีราคาสำเร็จ
   };
 
   const pending = bags.filter((b) => b.status !== "credited");
@@ -133,8 +136,8 @@ export default function CabinetDetailPage() {
         title={`ตีราคาถุง ${valuing?.qr ?? ""}`}
         footer={
           <>
-            <button className="btn-outline flex-1" onClick={() => setValuing(null)}>ยกเลิก</button>
-            <button className="btn-primary flex-1" disabled={items.length === 0} onClick={confirm}>ยืนยัน + ให้คะแนน</button>
+            <button className="btn-outline flex-1" onClick={() => setValuing(null)} disabled={valuingBusy}>ยกเลิก</button>
+            <button className="btn-primary flex-1" disabled={items.length === 0 || valuingBusy} onClick={confirm}>{valuingBusy ? <Spinner className="h-4 w-4" /> : "ยืนยัน + ให้คะแนน"}</button>
           </>
         }
       >

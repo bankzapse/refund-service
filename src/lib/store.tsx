@@ -133,7 +133,7 @@ interface StoreValue {
   // Drop & Go
   dropBags: (franchiseCode: string, cabinetCode: string, bagCodes: string[]) => Promise<boolean>;
   startSorting: (bagId: string) => void;
-  valueBag: (bagId: string, items: BagItem[]) => void;
+  valueBag: (bagId: string, items: BagItem[]) => Promise<boolean>;
   redeemPoints: (amountBaht: number, points: number, method: "promptpay" | "bank", account: string) => Promise<boolean>;
   markRedemptionPaid: (id: string) => void;
   rejectRedemption: (id: string) => void;
@@ -691,10 +691,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const goodsTotal = input.items.reduce((s, i) => s + i.subtotal, 0);
       const st = computeSettlement(goodsTotal);
       if (supabaseConfigured) {
-        const billId = await repo.settleBill(sbRef.current, input);
-        await refresh();
-        pushToast(input.source === "app_job" ? "ออกบิล + ปิดงานแล้ว" : `ออกบิล • จ่าย ฿${st.sellerNet}`, "success");
-        return { id: billId } as Bill;
+        startPending();
+        try {
+          const billId = await repo.settleBill(sbRef.current, input);
+          await refresh();
+          pushToast(input.source === "app_job" ? "ออกบิล + ปิดงานแล้ว" : `ออกบิล • จ่าย ฿${st.sellerNet}`, "success");
+          return { id: billId } as Bill;
+        } catch (e) {
+          pushToast(friendlyError(e, "ออกบิลไม่สำเร็จ ลองใหม่อีกครั้ง"), "info");
+          throw e;
+        } finally {
+          endPending();
+        }
       }
       const bill: Bill = {
         id: uid("bill-"),
@@ -734,7 +742,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       return bill;
     },
-    [currentUser, completeJob, pushToast, refresh],
+    [currentUser, completeJob, pushToast, refresh, startPending, endPending],
   );
 
   const voidBill = useCallback(
@@ -905,11 +913,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const valueBag = useCallback(
-    (bagId: string, items: BagItem[]) => {
+    async (bagId: string, items: BagItem[]): Promise<boolean> => {
       if (supabaseConfigured) return sbWrite((sb) => repo.valueBag(sb, bagId, items), "ตีราคา + ให้คะแนนแล้ว", "line");
+      let found = true;
       setDb((d) => {
         const bag = d.bags.find((b) => b.id === bagId);
-        if (!bag) return d;
+        if (!bag) { found = false; return d; }
         const valueBaht = items.reduce((s, i) => s + i.subtotal, 0);
         const points = valueBaht * POINTS_PER_BAHT;
         const now = todayISO();
@@ -921,9 +930,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           pointTxns: [{ id: uid("pt-"), userId: bag.userId, type: "earn", points, balanceAfter: bal, note: `ถุง ${bag.qr}`, bagId: bag.id, date: now }, ...d.pointTxns],
         };
       });
+      if (!found) { pushToast("ไม่พบถุงนี้ในระบบ", "info"); return false; }
       pushToast("ตีราคา + ให้คะแนนแล้ว · แจ้ง LINE คนทิ้ง", "line");
+      return true;
     },
-    [pushToast],
+    [pushToast, sbWrite],
   );
 
   const redeemPoints = useCallback(
