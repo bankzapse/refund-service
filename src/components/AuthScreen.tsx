@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { liffConfigured, getLineProfile, getLiffAccessToken } from "@/lib/liff";
 import { AuthShell } from "@/components/AuthShell";
 import type { Role } from "@/lib/types";
-import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound, PackageSearch } from "lucide-react";
+import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound, PackageSearch, ArrowLeft } from "lucide-react";
 
 export type PortalKey = "seller" | "franchise" | "company" | "center";
 const PHONE_RE = /^0\d{8,9}$/;
@@ -203,6 +203,9 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
             <Link href="/terms" className="underline">ข้อกำหนดการใช้งาน</Link> และ{" "}
             <Link href="/privacy" className="underline">นโยบายความเป็นส่วนตัว</Link>
           </p>
+          <Link href="/" className="mt-4 inline-flex w-full items-center justify-center gap-1 text-xs text-white/70 hover:text-white">
+            <ArrowLeft className="h-3.5 w-3.5" /> กลับหน้าหลัก
+          </Link>
         </>
       }
     >
