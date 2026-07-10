@@ -174,7 +174,7 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
     if (!password) return setErr("กรอกรหัสผ่าน");
     setBusy(true);
     try {
-      const res = await loginWithPassword(phone, password);
+      const res = await loginWithPassword(phone, password, portal.allowedRoles[0]);
       if (!res.ok) return setErr(res.error ?? "เข้าสู่ระบบไม่สำเร็จ");
       if (res.user) {
         // เดโม: กันเข้าผิดส่วน + ตั้ง active role ให้ตรง portal (รองรับ multi-role)

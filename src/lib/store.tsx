@@ -90,7 +90,7 @@ interface StoreValue {
   switchRole: (target: Role, forUserId?: string) => Promise<boolean>;
   findByPhone: (phone: string) => User | undefined;
   findByEmail: (email: string) => User | undefined;
-  loginWithPassword: (phone: string, password: string) => Promise<{ ok: boolean; user?: User; error?: string }>;
+  loginWithPassword: (phone: string, password: string, portalRole?: Role) => Promise<{ ok: boolean; user?: User; error?: string }>;
   registerAccount: (input: { name?: string; phone: string; email?: string; password: string }) => Promise<{ ok: boolean; error?: string }>;
   resetPassword: (phone: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   loginWithLine: (profile: { userId: string; displayName: string; pictureUrl?: string }) => void;
@@ -342,13 +342,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // เข้าสู่ระบบด้วยเบอร์ + รหัสผ่าน
   // เดโม: ตรวจกับ user ในเครื่อง (ไม่ตั้ง session — คืน user ให้ AuthScreen ตรวจ role ก่อน loginAs)
   const loginWithPassword = useCallback(
-    async (phone: string, password: string): Promise<{ ok: boolean; user?: User; error?: string }> => {
+    async (phone: string, password: string, portalRole?: Role): Promise<{ ok: boolean; user?: User; error?: string }> => {
       const p = phone.trim();
       if (supabaseConfigured) {
         try {
-          const { error } = await createClient().auth.signInWithPassword({ phone: toE164(p), password });
+          const sb = createClient();
+          const { error } = await sb.auth.signInWithPassword({ phone: toE164(p), password });
           if (error) return { ok: false, error: friendlyError(error) };
-          return { ok: true }; // session → onAuthStateChange → redirect
+          // ตั้ง active role ให้ตรงกับ portal ที่ล็อกอิน (ถ้าบัญชีมีบทบาทนั้น) — ทำก่อนที่ load จะอ่านโปรไฟล์
+          // load() ต้องเรียก getUser() (1 RTT) ก่อนอ่าน profiles → RPC นี้ commit ทันก่อนการอ่าน role เสมอ
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (portalRole) { try { await (sb as any).rpc("set_active_role", { p_role: portalRole }); } catch { /* ไม่มีบทบาทนั้น → คงบทบาทเดิม */ } }
+          return { ok: true }; // session → onAuthStateChange → redirect ตาม active role
         } catch (e) {
           return { ok: false, error: friendlyError(e) };
         }
