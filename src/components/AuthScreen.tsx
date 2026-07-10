@@ -112,18 +112,17 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
   }, [currentUser, loginAs]);
 
   // มี user แล้ว → ถ้าบัญชีมีบทบาทของ portal นี้ให้สลับไปบทบาทนั้น (multi-role) แล้วไปคอนโซลนั้น
-  const switchingRef = useRef(false);
+  const switchedRef = useRef(false); // สลับครั้งเดียวต่อการเปิดหน้านี้ (กัน loop ไม่รู้จบ)
   useEffect(() => {
     if (!currentUser) return;
     const roles = currentUser.roles ?? [currentUser.role];
     const target = portal.allowedRoles.find((r) => roles.includes(r)) ?? currentUser.role;
-    if (currentUser.role !== target) {
-      if (switchingRef.current) return;
-      switchingRef.current = true;
-      switchRole(target).finally(() => { switchingRef.current = false; });
-      return; // รอ role อัปเดตแล้ว effect จะ redirect รอบถัดไป
+    if (currentUser.role !== target && !switchedRef.current) {
+      switchedRef.current = true;
+      switchRole(target); // อัปเดต role → effect ทำงานรอบถัดไป → redirect
+      return;
     }
-    router.replace(destFor(target));
+    router.replace(destFor(currentUser.role)); // redirect ตาม role จริง (สลับสำเร็จ=ไปคอนโซลนั้น, ไม่สำเร็จ=คอนโซลเดิม ไม่เด้งวน)
   }, [currentUser, portal, switchRole, router]);
 
   // เลือก role เป้าหมายของ portal นี้ที่บัญชีถือได้ (รองรับ multi-role) — คืน null ถ้าไม่มีสิทธิ์

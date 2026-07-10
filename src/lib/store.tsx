@@ -47,6 +47,15 @@ function profileToUser(p: any): User {
 const DB_KEY = "rf_db_v15";
 const USER_KEY = "rf_user_v15";
 
+// กันงาน network/auth แขวนค้างไม่รู้จบ → บังคับ reject เมื่อเกินเวลา (spinner จะไม่ค้างตลอด)
+// รับ PromiseLike ด้วย (query builder ของ supabase เป็น thenable ไม่ใช่ Promise เต็ม)
+function withTimeout<T>(p: PromiseLike<T>, ms = 15000, label = "หมดเวลา"): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(label + " (timeout)")), ms)),
+  ]);
+}
+
 type Toast = { id: string; text: string; kind: "success" | "info" | "line" };
 
 interface CreateJobInput {
@@ -187,20 +196,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     const load = async () => {
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data } = await withTimeout(supabase.auth.getUser(), 12000, "ตรวจ session ช้า");
         const user = data?.user ?? null;
         if (!active) return;
         if (!user) {
           setSbUser(null);
         } else {
-          const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+          const { data: profile } = await withTimeout(supabase.from("profiles").select("*").eq("id", user.id).single(), 12000, "โหลดโปรไฟล์ช้า");
           if (!active) return;
           setSbUser(profile ? profileToUser(profile) : null);
           try {
-            const fresh = await repo.loadAll(supabase);
+            const fresh = await withTimeout(repo.loadAll(supabase), 20000, "โหลดข้อมูลช้า");
             if (active) setDb(fresh);
           } catch {
-            /* โหลดข้อมูลล้มเหลว — ยังให้ผ่านด้วย db ที่มี */
+            /* โหลดข้อมูลล้มเหลว/ช้า — ยังให้ผ่านด้วย db ที่มี */
           }
         }
       } catch {
@@ -311,11 +320,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (supabaseConfigured) {
         startPending();
         try {
-          const { error } = await sbRef.current.rpc("set_active_role", { p_role: target });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = (await withTimeout(sbRef.current.rpc("set_active_role", { p_role: target }), 12000, "สลับบทบาทช้า")) as any;
           if (error) { pushToast(friendlyError(error, "สลับบทบาทไม่สำเร็จ"), "info"); return false; }
-          await refresh();
-          const { data: prof } = await sbRef.current.from("profiles").select("*").eq("id", u.id).single();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: prof } = (await withTimeout(sbRef.current.from("profiles").select("*").eq("id", u.id).single(), 12000, "โหลดโปรไฟล์ช้า")) as any;
           if (prof) setSbUser(profileToUser(prof));
+          refresh(); // โหลดข้อมูลอื่นเบื้องหลัง ไม่บล็อกการสลับบทบาท
           return true;
         } catch (e) {
           pushToast(friendlyError(e, "สลับบทบาทไม่สำเร็จ"), "info");
@@ -346,14 +357,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const p = phone.trim();
       if (supabaseConfigured) {
         try {
-          const sb = createClient();
-          const { error } = await sb.auth.signInWithPassword({ phone: toE164(p), password });
+          // เฉพาะ signIn เท่านั้นในเส้นทางวิกฤต + timeout กันแขวนค้าง (การสลับบทบาทจัดการที่ effect หลัง login)
+          const { error } = await withTimeout(
+            createClient().auth.signInWithPassword({ phone: toE164(p), password }),
+            15000,
+            "เข้าสู่ระบบช้าผิดปกติ",
+          );
           if (error) return { ok: false, error: friendlyError(error) };
-          // ตั้ง active role ให้ตรงกับ portal ที่ล็อกอิน (ถ้าบัญชีมีบทบาทนั้น) — ทำก่อนที่ load จะอ่านโปรไฟล์
-          // load() ต้องเรียก getUser() (1 RTT) ก่อนอ่าน profiles → RPC นี้ commit ทันก่อนการอ่าน role เสมอ
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (portalRole) { try { await (sb as any).rpc("set_active_role", { p_role: portalRole }); } catch { /* ไม่มีบทบาทนั้น → คงบทบาทเดิม */ } }
-          return { ok: true }; // session → onAuthStateChange → redirect ตาม active role
+          void portalRole; // active role ถูกตั้งโดย effect ใน AuthScreen (switchRole) หลัง session พร้อม
+          return { ok: true };
         } catch (e) {
           return { ok: false, error: friendlyError(e) };
         }
