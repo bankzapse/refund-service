@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore, DEMO_PASSWORD } from "@/lib/store";
@@ -88,6 +88,8 @@ export const PORTALS: Record<PortalKey, Portal> = {
   },
 };
 
+const destFor = (r: Role): string => (r === "admin" ? "/admin" : r === "franchise" ? "/franchise" : r === "buyer" ? "/shop" : "/home");
+
 export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
   const portal = PORTALS[portalKey];
   const router = useRouter();
@@ -109,12 +111,20 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
     if (as && DEMO[as]) loginAs(DEMO[as]);
   }, [currentUser, loginAs]);
 
-  // มี user แล้ว → ไปหน้าที่เหมาะกับ role
+  // มี user แล้ว → ถ้าบัญชีมีบทบาทของ portal นี้ให้สลับไปบทบาทนั้น (multi-role) แล้วไปคอนโซลนั้น
+  const switchingRef = useRef(false);
   useEffect(() => {
     if (!currentUser) return;
-    const dest = currentUser.role === "admin" ? "/admin" : currentUser.role === "franchise" ? "/franchise" : currentUser.role === "buyer" ? "/shop" : "/home";
-    router.replace(dest);
-  }, [currentUser, router]);
+    const roles = currentUser.roles ?? [currentUser.role];
+    const target = portal.allowedRoles.find((r) => roles.includes(r)) ?? currentUser.role;
+    if (currentUser.role !== target) {
+      if (switchingRef.current) return;
+      switchingRef.current = true;
+      switchRole(target).finally(() => { switchingRef.current = false; });
+      return; // รอ role อัปเดตแล้ว effect จะ redirect รอบถัดไป
+    }
+    router.replace(destFor(target));
+  }, [currentUser, portal, switchRole, router]);
 
   // เลือก role เป้าหมายของ portal นี้ที่บัญชีถือได้ (รองรับ multi-role) — คืน null ถ้าไม่มีสิทธิ์
   const targetRoleFor = (u: { role: Role; roles?: Role[] }): Role | null => {
