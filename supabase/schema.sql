@@ -223,9 +223,9 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
 $$;
 
--- profiles: อ่านสาธารณะ · แก้ของตัวเอง · แอดมินแก้ได้หมด
+-- profiles: อ่านได้เฉพาะผู้ล็อกอิน (บล็อก anon) · แก้ของตัวเอง · แอดมินแก้ได้หมด
 drop policy if exists "profiles read" on profiles;
-create policy "profiles read"   on profiles for select using (true);
+create policy "profiles read"   on profiles for select using (auth.uid() is not null);
 create policy "profiles insert" on profiles for insert with check (auth.uid() = id);
 create policy "profiles update" on profiles for update using (auth.uid() = id or is_admin());
 
