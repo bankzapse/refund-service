@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { Logo } from "@/components/Logo";
+import { BootLoader } from "@/components/ui";
 import { LayoutDashboard, ReceiptText, Wallet, Tag, LogOut, LayoutGrid, Plus, Box } from "lucide-react";
 
 const NAV = [
@@ -32,7 +33,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
   }, [ready, currentUser, router, pathname]);
 
   if (!ready || !currentUser || currentUser.role !== "buyer") {
-    return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
+    return <BootLoader />;
   }
 
   const isActive = (href: string, exact?: boolean) =>

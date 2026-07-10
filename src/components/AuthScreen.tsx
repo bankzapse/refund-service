@@ -169,18 +169,24 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
   }
 
   const doLogin = async () => {
+    if (busy) return;
     setErr("");
     if (!PHONE_RE.test(phone.trim())) return setErr("กรอกเบอร์โทรให้ถูกต้อง (10 หลัก ขึ้นต้น 0)");
     if (!password) return setErr("กรอกรหัสผ่าน");
     setBusy(true);
-    const res = await loginWithPassword(phone, password);
-    setBusy(false);
-    if (!res.ok) return setErr(res.error ?? "เข้าสู่ระบบไม่สำเร็จ");
-    if (res.user) {
-      if (!checkRole(res.user.role)) return; // เดโม: กันเข้าผิดส่วน
-      loginAs(res.user.id);
+    try {
+      const res = await loginWithPassword(phone, password);
+      if (!res.ok) return setErr(res.error ?? "เข้าสู่ระบบไม่สำเร็จ");
+      if (res.user) {
+        if (!checkRole(res.user.role)) return; // เดโม: กันเข้าผิดส่วน
+        loginAs(res.user.id);
+      }
+      // supabase: session ถูกตั้งแล้ว → redirect effect จัดการ
+    } catch {
+      setErr("เชื่อมต่อไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
+    } finally {
+      setBusy(false);
     }
-    // supabase: session ถูกตั้งแล้ว → redirect effect จัดการ
   };
 
   return (

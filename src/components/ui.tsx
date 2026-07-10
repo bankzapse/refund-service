@@ -154,6 +154,82 @@ export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn("h-5 w-5 animate-spin", className)} />;
 }
 
+/* ---------------- Skeleton (โครงโหลดข้อมูล) ---------------- */
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-lg bg-neutral-200/70", className)} />;
+}
+
+/** โครงรายการ (การ์ด) ระหว่างโหลดข้อมูล */
+export function SkeletonList({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-neutral-900/5">
+          <Skeleton className="h-11 w-11 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+          <Skeleton className="h-6 w-14 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------- Global loading bar (บนสุดของจอ) ---------------- */
+/** แถบโหลดบาง ๆ ด้านบน แสดงเมื่อมีงานกำลังประมวลผล (pending > 0) — ให้ feedback ทั่วทั้งระบบ */
+export function GlobalLoadingBar() {
+  const { pending } = useStore();
+  const active = pending > 0;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-0.5 overflow-hidden">
+      <div
+        className={cn(
+          "h-full bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400 transition-opacity duration-200",
+          active ? "animate-loading-bar opacity-100" : "opacity-0",
+        )}
+      />
+    </div>
+  );
+}
+
+/* ---------------- Full-screen boot loader ---------------- */
+export function BootLoader({ label = "กำลังโหลด…" }: { label?: string }) {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-white">
+      <div className="flex flex-col items-center gap-3 text-neutral-400">
+        <Spinner className="h-7 w-7 text-brand-500" />
+        <p className="text-sm font-medium">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+/** โครงหน้าฝั่งผู้ขาย (มือถือ) ระหว่างโหลดข้อมูล — เห็นเป็นหน้ารายการที่กำลังโหลด */
+export function AppSkeleton() {
+  return (
+    <div className="min-h-dvh bg-neutral-50 px-4 pb-24 pt-6">
+      <div className="mx-auto max-w-md space-y-5">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-2xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-1/2" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+        </div>
+        <Skeleton className="h-32 w-full rounded-3xl" />
+        <div className="flex gap-3">
+          <Skeleton className="h-20 flex-1 rounded-2xl" />
+          <Skeleton className="h-20 flex-1 rounded-2xl" />
+        </div>
+        <Skeleton className="h-3.5 w-28" />
+        <SkeletonList rows={4} />
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Toaster ---------------- */
 export function Toaster() {
   const { toasts, dismissToast } = useStore();

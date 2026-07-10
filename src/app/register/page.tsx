@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { AuthShell } from "@/components/AuthShell";
 import { supabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/authError";
 import { ArrowRight, Loader2, User, Phone, Mail, KeyRound } from "lucide-react";
 
 const PHONE_RE = /^0\d{8,9}$/;
@@ -33,58 +34,61 @@ function RegisterForm() {
   }, [currentUser, router]);
 
   const requestOtp = async () => {
+    if (busy) return;
     setErr("");
     if (name.trim().length < 2) return setErr("กรอกชื่อ-นามสกุล");
     if (!PHONE_RE.test(phone.trim())) return setErr("เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้น 0)");
     if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) return setErr("อีเมลไม่ถูกต้อง");
     if (password.length < 6) return setErr("รหัสผ่านอย่างน้อย 6 ตัวอักษร");
     if (password !== confirm) return setErr("รหัสผ่านยืนยันไม่ตรงกัน");
-    if (supabaseConfigured) {
-      // Supabase สร้าง user + ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK)
-      setBusy(true);
-      const { error } = await createClient().auth.signUp({ phone: toE164(phone), password, options: { data: { name: name.trim(), role: "seller" } } });
-      setBusy(false);
-      if (error) return setErr(error.message);
-      setSmsMode(true);
-      return setStep(2);
-    }
-    // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
     setBusy(true);
     try {
+      if (supabaseConfigured) {
+        // Supabase สร้าง user + ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK)
+        const { error } = await createClient().auth.signUp({ phone: toE164(phone), password, options: { data: { name: name.trim(), role: "seller" } } });
+        if (error) return setErr(friendlyError(error));
+        setSmsMode(true);
+        return setStep(2);
+      }
+      // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
       const r = await fetch("/api/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
-      const j = await r.json();
-      setBusy(false);
-      if (!r.ok || j.ok === false) return setErr(j.error ?? "ส่งรหัส OTP ไม่สำเร็จ");
+      const j = await r.json().catch(() => ({ ok: false }));
+      if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "ส่งรหัส OTP ไม่สำเร็จ"));
       setSmsMode(!!j.configured);
       setOtpToken(j.token ?? null);
-    } catch {
+      setStep(2);
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
       setBusy(false);
-      return setErr("เชื่อมต่อไม่สำเร็จ ลองอีกครั้ง");
     }
-    setStep(2);
   };
 
   const confirmOtp = async () => {
+    if (busy) return;
     setErr("");
     if (otp.trim().length !== 6) return setErr("กรอกรหัส OTP 6 หลัก");
-    if (supabaseConfigured) {
-      setBusy(true);
-      const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
+    setBusy(true);
+    try {
+      if (supabaseConfigured) {
+        const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
+        if (error) return setErr(friendlyError(error));
+        return; // session → redirect effect
+      }
+      if (smsMode) {
+        const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
+          .then((r) => r.json())
+          .catch(() => ({ ok: false }));
+        if (!v.ok) return setErr("รหัส OTP ไม่ถูกต้องหรือหมดอายุ — กดส่งรหัสใหม่");
+      }
+      const res = await registerAccount({ name, phone, email: email || undefined, password });
+      if (!res.ok) return setErr(res.error ?? "สมัครไม่สำเร็จ");
+      // demo: registerAccount ตั้ง currentUser แล้ว → redirect effect
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
       setBusy(false);
-      if (error) return setErr(error.message);
-      return; // session → redirect effect
     }
-    if (smsMode) {
-      setBusy(true);
-      const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
-        .then((r) => r.json())
-        .catch(() => ({ ok: false }));
-      setBusy(false);
-      if (!v.ok) return setErr("รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
-    }
-    const res = await registerAccount({ name, phone, email: email || undefined, password });
-    if (!res.ok) return setErr(res.error ?? "สมัครไม่สำเร็จ");
-    // demo: registerAccount ตั้ง currentUser แล้ว → redirect effect
   };
 
   return (
@@ -137,7 +141,10 @@ function RegisterForm() {
           <button className="btn-primary mt-3 w-full" onClick={confirmOtp} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "ยืนยัน & สมัครสมาชิก"}
           </button>
-          <button className="btn-ghost mt-2 w-full text-sm text-neutral-500" onClick={() => { setStep(1); setErr(""); }}>แก้ไขข้อมูล</button>
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <button className="text-neutral-500 hover:text-neutral-700" onClick={() => { setStep(1); setErr(""); setOtp(""); }} disabled={busy}>← แก้ไขข้อมูล</button>
+            <button className="font-medium text-brand-600 disabled:opacity-50" onClick={() => { setOtp(""); requestOtp(); }} disabled={busy}>ส่งรหัสใหม่</button>
+          </div>
         </>
       )}
     </AuthShell>

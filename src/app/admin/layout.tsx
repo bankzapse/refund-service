@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { canAccessAdminMenu } from "@/lib/permissions";
 import { Logo } from "@/components/Logo";
+import { BootLoader } from "@/components/ui";
 import { LayoutDashboard, Users, Trophy, Tag, LogOut, Recycle, Store, Landmark, Banknote, Truck, Receipt, LayoutGrid, PackageSearch, ShieldCheck } from "lucide-react";
 
 const NAV = [
@@ -50,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [ready, currentUser, router, pathname]);
 
   if (!ready || !currentUser || currentUser.role !== "admin") {
-    return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
+    return <BootLoader />;
   }
 
   // เมนูที่ผู้ใช้ปัจจุบันเข้าถึงได้ (owner = ทุกเมนู, ผู้ดูแล = ตามสิทธิ์)

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { BottomNav } from "@/components/BottomNav";
+import { BootLoader, AppSkeleton } from "@/components/ui";
 import { Ban } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,9 +15,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (ready && !currentUser) router.replace("/app");
   }, [ready, currentUser, router]);
 
-  if (!ready || !currentUser) {
-    return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
-  }
+  if (!ready) return <AppSkeleton />; // กำลังโหลดข้อมูล → โครงหน้า
+  if (!currentUser) return <BootLoader />; // ไม่มี session → กำลังพาไปหน้าเลือกพอร์ทัล
 
   // บัญชีถูกแอดมินระงับ → บล็อกการใช้งาน
   if (currentUser.status === "suspended") {

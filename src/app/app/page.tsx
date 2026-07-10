@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { supabaseConfigured } from "@/lib/supabase/config";
 import { Logo } from "@/components/Logo";
+import { BootLoader } from "@/components/ui";
 import { User, Building2, ShieldCheck, Store, ChevronRight, ArrowLeft } from "lucide-react";
 
 const PORTALS = [
@@ -33,7 +34,7 @@ export default function AppChooser() {
   };
 
   if (DEMO_DISABLED) {
-    return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
+    return <BootLoader />;
   }
 
   return (

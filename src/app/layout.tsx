@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
-import { Toaster } from "@/components/ui";
+import { Toaster, GlobalLoadingBar } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { NativeBootstrap } from "@/components/NativeBootstrap";
 
@@ -32,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           <NativeBootstrap />
+          <GlobalLoadingBar />
           <Shell>{children}</Shell>
           <Toaster />
         </StoreProvider>

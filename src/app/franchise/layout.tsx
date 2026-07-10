@@ -7,6 +7,7 @@ import { franchiseById } from "@/lib/selectors";
 import { cn } from "@/lib/utils";
 import { LogOut, LayoutDashboard, Box, PackageOpen, FileText, Landmark, Banknote, LayoutGrid } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { BootLoader } from "@/components/ui";
 import Link from "next/link";
 
 const NAV = [
@@ -30,7 +31,7 @@ export default function FranchiseLayout({ children }: { children: React.ReactNod
   }, [ready, currentUser, router]);
 
   if (!ready || !currentUser || currentUser.role !== "franchise") {
-    return <div className="grid min-h-dvh place-items-center text-neutral-400">กำลังโหลด…</div>;
+    return <BootLoader />;
   }
 
   const fr = franchiseById(db, currentUser.franchiseId ?? "");

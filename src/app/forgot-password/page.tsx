@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { AuthShell } from "@/components/AuthShell";
 import { supabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/authError";
 import { ArrowRight, Loader2, Phone, KeyRound, CheckCircle2 } from "lucide-react";
 
 const PHONE_RE = /^0\d{8,9}$/;
@@ -29,63 +30,72 @@ function ForgotForm() {
   const [busy, setBusy] = useState(false);
 
   const requestOtp = async () => {
+    if (busy) return;
     setErr("");
     if (!PHONE_RE.test(phone.trim())) return setErr("เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้น 0)");
-    if (supabaseConfigured) {
-      // Supabase ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK)
-      setBusy(true);
-      const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone) });
-      setBusy(false);
-      if (error) return setErr(error.message);
-      setSmsMode(true);
-      return setStep(2);
-    }
-    // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
     setBusy(true);
     try {
+      if (supabaseConfigured) {
+        // Supabase ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK)
+        const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone) });
+        if (error) return setErr(friendlyError(error));
+        setSmsMode(true);
+        return setStep(2);
+      }
+      // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
       const r = await fetch("/api/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
-      const j = await r.json();
-      setBusy(false);
-      if (!r.ok || j.ok === false) return setErr(j.error ?? "ส่งรหัส OTP ไม่สำเร็จ");
+      const j = await r.json().catch(() => ({ ok: false }));
+      if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "ส่งรหัส OTP ไม่สำเร็จ"));
       setSmsMode(!!j.configured);
       setOtpToken(j.token ?? null);
-    } catch {
+      setStep(2);
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
       setBusy(false);
-      return setErr("เชื่อมต่อไม่สำเร็จ ลองอีกครั้ง");
     }
-    setStep(2);
   };
 
   const verifyOtp = async () => {
+    if (busy) return;
     setErr("");
     if (otp.trim().length !== 6) return setErr("กรอกรหัส OTP 6 หลัก");
-    if (supabaseConfigured) {
-      setBusy(true);
-      const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
+    setBusy(true);
+    try {
+      if (supabaseConfigured) {
+        const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
+        if (error) return setErr(friendlyError(error));
+        return setStep(3); // session แล้ว → ตั้งรหัสใหม่ด้วย updateUser ได้
+      }
+      if (smsMode) {
+        const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
+          .then((r) => r.json())
+          .catch(() => ({ ok: false }));
+        if (!v.ok) return setErr("รหัส OTP ไม่ถูกต้องหรือหมดอายุ — กดเปลี่ยนเบอร์เพื่อขอใหม่");
+      }
+      setStep(3);
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
       setBusy(false);
-      if (error) return setErr(error.message);
-      return setStep(3); // session แล้ว → ตั้งรหัสใหม่ด้วย updateUser ได้
     }
-    if (smsMode) {
-      setBusy(true);
-      const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
-        .then((r) => r.json())
-        .catch(() => ({ ok: false }));
-      setBusy(false);
-      if (!v.ok) return setErr("รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
-    }
-    setStep(3);
   };
 
   const savePassword = async () => {
+    if (busy) return;
     setErr("");
     if (password.length < 6) return setErr("รหัสผ่านอย่างน้อย 6 ตัวอักษร");
     if (password !== confirm) return setErr("รหัสผ่านยืนยันไม่ตรงกัน");
     setBusy(true);
-    const res = await resetPassword(phone, password);
-    setBusy(false);
-    if (!res.ok) return setErr(res.error ?? "ตั้งรหัสผ่านใหม่ไม่สำเร็จ");
-    setStep(4);
+    try {
+      const res = await resetPassword(phone, password);
+      if (!res.ok) return setErr(res.error ?? "ตั้งรหัสผ่านใหม่ไม่สำเร็จ");
+      setStep(4);
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

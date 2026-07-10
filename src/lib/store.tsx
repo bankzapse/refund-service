@@ -9,6 +9,7 @@ import { computeSettlement, MAX_TICKETS_PER_MONTH, MIN_CREDIT } from "./fees";
 import { supabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/client";
 import * as repo from "./supabase/repo";
+import { friendlyError } from "./authError";
 
 /** รหัสผ่านเริ่มต้นของบัญชีเดโม (seed users) — โหมดเดโมเท่านั้น */
 export const DEMO_PASSWORD = "123456";
@@ -82,6 +83,7 @@ interface StoreValue {
   toasts: Toast[];
   dismissToast: (id: string) => void;
   pushToast: (text: string, kind?: Toast["kind"]) => void;
+  pending: number; // จำนวนงานที่กำลังประมวลผล (ใช้โชว์ loading bar ทั่วระบบ)
   // auth
   loginAs: (userId: string) => void;
   findByPhone: (phone: string) => User | undefined;
@@ -156,6 +158,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [sbUser, setSbUser] = useState<User | null>(null); // production: จาก Supabase session
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [pending, setPending] = useState(0); // ตัวนับงานที่กำลังประมวลผล → loading bar
+  const startPending = useCallback(() => setPending((n) => n + 1), []);
+  const endPending = useCallback(() => setPending((n) => Math.max(0, n - 1)), []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sbRef = useRef<any>(null);
 
@@ -248,32 +253,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (fn: (sb: any) => Promise<any>, msg?: string, kind?: Toast["kind"]) => {
       const sb = sbRef.current;
-      if (!sb) return;
+      if (!sb) return pushToast("ระบบยังไม่พร้อม ลองใหม่อีกครั้ง", "info");
+      startPending();
       fn(sb)
-        .then(() => {
-          refresh();
+        .then(async () => {
+          await refresh();
           if (msg) pushToast(msg, kind ?? "success");
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .catch((e: any) => pushToast(e?.message ?? "เกิดข้อผิดพลาด", "info"));
+        .catch((e: unknown) => pushToast(friendlyError(e, "ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง"), "info"))
+        .finally(endPending);
     },
-    [refresh, pushToast],
+    [refresh, pushToast, startPending, endPending],
   );
 
   // จัดการบัญชีศูนย์คัดแยก/ผู้ดูแล ผ่าน service-role API (โหมด Supabase)
   const adminUsersApi = useCallback(
     async (action: string, payload: Record<string, unknown>, msg?: string) => {
+      startPending();
       try {
         const r = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload }) });
         const j = await r.json().catch(() => ({ ok: false }));
-        if (!r.ok || j.ok === false) return pushToast(j.error ?? "ทำรายการไม่สำเร็จ", "info");
+        if (!r.ok || j.ok === false) return pushToast(friendlyError(j.error, "ทำรายการไม่สำเร็จ"), "info");
         await refresh();
         if (msg) pushToast(msg, "success");
-      } catch {
-        pushToast("เชื่อมต่อไม่สำเร็จ", "info");
+      } catch (e) {
+        pushToast(friendlyError(e, "เชื่อมต่อไม่สำเร็จ"), "info");
+      } finally {
+        endPending();
       }
     },
-    [refresh, pushToast],
+    [refresh, pushToast, startPending, endPending],
   );
 
   // ---- auth ----
@@ -293,9 +302,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (phone: string, password: string): Promise<{ ok: boolean; user?: User; error?: string }> => {
       const p = phone.trim();
       if (supabaseConfigured) {
-        const { error } = await createClient().auth.signInWithPassword({ phone: toE164(p), password });
-        if (error) return { ok: false, error: error.message };
-        return { ok: true }; // session → onAuthStateChange → redirect
+        try {
+          const { error } = await createClient().auth.signInWithPassword({ phone: toE164(p), password });
+          if (error) return { ok: false, error: friendlyError(error) };
+          return { ok: true }; // session → onAuthStateChange → redirect
+        } catch (e) {
+          return { ok: false, error: friendlyError(e) };
+        }
       }
       const u = db.users.find((x) => x.phone === p);
       if (!u) return { ok: false, error: "ไม่พบบัญชีนี้ — ลงทะเบียนก่อน" };
@@ -310,9 +323,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (input: { name?: string; phone: string; email?: string; password: string }): Promise<{ ok: boolean; error?: string }> => {
       const phone = input.phone.trim();
       if (supabaseConfigured) {
-        const { error } = await createClient().auth.signUp({ phone: toE164(phone), password: input.password, options: { data: { name: input.name?.trim(), role: "seller" } } });
-        if (error) return { ok: false, error: error.message };
-        return { ok: true };
+        try {
+          const { error } = await createClient().auth.signUp({ phone: toE164(phone), password: input.password, options: { data: { name: input.name?.trim(), role: "seller" } } });
+          if (error) return { ok: false, error: friendlyError(error) };
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: friendlyError(e) };
+        }
       }
       if (db.users.some((u) => u.phone === phone)) return { ok: false, error: "เบอร์นี้มีบัญชีแล้ว" };
       const user: User = {
@@ -338,9 +355,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (phone: string, newPassword: string): Promise<{ ok: boolean; error?: string }> => {
       const p = phone.trim();
       if (supabaseConfigured) {
-        const { error } = await createClient().auth.updateUser({ password: newPassword });
-        if (error) return { ok: false, error: error.message };
-        return { ok: true };
+        try {
+          const { error } = await createClient().auth.updateUser({ password: newPassword });
+          if (error) return { ok: false, error: friendlyError(error) };
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: friendlyError(e) };
+        }
       }
       const u = db.users.find((x) => x.phone === p);
       if (!u) return { ok: false, error: "ไม่พบบัญชีของเบอร์นี้" };
@@ -1162,6 +1183,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     toasts,
     dismissToast,
     pushToast,
+    pending,
     loginAs,
     findByPhone,
     findByEmail,
