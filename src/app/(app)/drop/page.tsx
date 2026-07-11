@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { AppHeader } from "@/components/AppHeader";
 import { Spinner } from "@/components/ui";
 import { MIN_ITEMS_PER_BAG, MAX_BAGS_PER_DROP, parseBagQr, bagQr, cabinetFullCode } from "@/lib/types";
-import { liffConfigured, scanQr } from "@/lib/liff";
+import { liffConfigured, scanQr, isInLineClient } from "@/lib/liff";
 import { isNativeApp, nativeScanQr } from "@/lib/native";
 import { QrScanner } from "@/components/QrScanner";
 import { QrCode, Plus, Trash2, PackagePlus, Box, ChevronRight, Info, ScanLine, PackageCheck } from "lucide-react";
@@ -40,7 +40,8 @@ export default function DropPage() {
       if (v) handleCode(v);
       return;
     }
-    if (liffConfigured) {
+    // ใช้สแกนของ LINE เฉพาะเมื่ออยู่ใน LINE จริงๆ — เว็บ/มือถือปกติต้องเปิดกล้องเว็บ
+    if (liffConfigured && (await isInLineClient())) {
       const v = await scanQr();
       if (v) handleCode(v);
       return;
