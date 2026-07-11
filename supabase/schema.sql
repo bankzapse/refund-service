@@ -501,13 +501,22 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles where id = auth.uid() and role in ('buyer', 'admin'));
 $$;
 
+-- แฟรนไชส์อ่านถุงในตู้ของตัวเองได้ (แดชบอร์ด "ถุงรอคัดแยก")
+create or replace function owns_cabinet(p_cabinet uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from cabinets c join profiles p on p.id = auth.uid()
+    where c.id = p_cabinet and p.role = 'franchise' and c.franchise_id = p.franchise_id
+  );
+$$;
+
 drop policy if exists "cab read" on cabinets;
 create policy "cab read" on cabinets for select using (true);
 drop policy if exists "bags read" on mesh_bags;
-create policy "bags read" on mesh_bags for select using (auth.uid() = user_id or is_operator());
+create policy "bags read" on mesh_bags for select using (auth.uid() = user_id or is_operator() or owns_cabinet(cabinet_id));
 drop policy if exists "bagitems read" on bag_items;
 create policy "bagitems read" on bag_items for select using (
-  exists (select 1 from mesh_bags b where b.id = bag_id and (b.user_id = auth.uid() or is_operator())));
+  exists (select 1 from mesh_bags b where b.id = bag_id and (b.user_id = auth.uid() or is_operator() or owns_cabinet(b.cabinet_id))));
 drop policy if exists "pts read" on point_transactions;
 create policy "pts read" on point_transactions for select using (auth.uid() = user_id or is_admin());
 drop policy if exists "redeem read" on redemptions;

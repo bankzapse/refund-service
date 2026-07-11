@@ -95,14 +95,19 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, id: created.user.id });
       }
       case "updateCenter": {
-        const { userId, name, phone, address, province, district, subdistrict } = body;
+        const { userId, name, phone, password, address, province, district, subdistrict } = body;
         if (!userId) return bad("missing userId");
+        if (phone != null && phone !== "" && !/^0\d{8,9}$/.test(String(phone).trim())) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
+        if (password != null && password !== "" && String(password).length < 4) return bad("รหัสผ่านอย่างน้อย 4 ตัวอักษร");
         await table("profiles").update({
           ...(name != null ? { name: String(name).trim() } : {}),
           ...(phone != null ? { phone: String(phone).trim() } : {}),
           address: address ?? null, province: province ?? null, district: district ?? null, subdistrict: subdistrict ?? null,
         }).eq("id", userId).eq("role", "buyer");
-        if (phone) await admin.auth.admin.updateUserById(userId, { phone: toE164(phone) });
+        const authPatch: Record<string, unknown> = {};
+        if (phone) authPatch.phone = toE164(phone);
+        if (password) authPatch.password = String(password);
+        if (Object.keys(authPatch).length) await admin.auth.admin.updateUserById(userId, authPatch);
         return NextResponse.json({ ok: true });
       }
       case "removeCenter": {

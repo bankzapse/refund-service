@@ -130,7 +130,7 @@ interface StoreValue {
   reviewPayout: (userId: string, approve: boolean, note?: string) => void;
   payFranchise: (franchiseId: string, amount: number, note?: string) => Promise<boolean>;
   addCenter: (input: { name: string; phone: string; password: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
-  updateCenter: (userId: string, patch: { name?: string; phone?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
+  updateCenter: (userId: string, patch: { name?: string; phone?: string; password?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   removeCenter: (userId: string) => void;
   addAdmin: (input: { name: string; phone: string; password: string; permissions: string[] }) => void;
   removeAdmin: (userId: string) => void;
@@ -1124,13 +1124,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // บริษัทแก้ไขข้อมูลศูนย์คัดแยก (ชื่อ/เบอร์/ที่อยู่)
   const updateCenter = useCallback(
-    (userId: string, patch: { name?: string; phone?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
+    (userId: string, patch: { name?: string; phone?: string; password?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
       const phone = patch.phone?.trim();
       if (phone !== undefined) {
         if (!/^0\d{8,9}$/.test(phone)) { pushToast("เบอร์โทรไม่ถูกต้อง (10 หลัก)", "info"); return; }
         if (db.users.some((u) => u.phone === phone && u.id !== userId)) { pushToast("เบอร์นี้มีบัญชีอยู่แล้ว", "info"); return; }
       }
-      if (supabaseConfigured) { adminUsersApi("updateCenter", { userId, name: patch.name, phone: patch.phone, address: patch.address, province: patch.province, district: patch.district, subdistrict: patch.subdistrict }, "บันทึกข้อมูลศูนย์คัดแยกแล้ว"); return; }
+      const password = patch.password?.trim();
+      if (password && password.length < 4) { pushToast("รหัสผ่านอย่างน้อย 4 ตัวอักษร", "info"); return; }
+      if (supabaseConfigured) { adminUsersApi("updateCenter", { userId, name: patch.name, phone: patch.phone, password: password || undefined, address: patch.address, province: patch.province, district: patch.district, subdistrict: patch.subdistrict }, "บันทึกข้อมูลศูนย์คัดแยกแล้ว"); return; }
       setDb((d) => ({
         ...d,
         users: d.users.map((u) =>

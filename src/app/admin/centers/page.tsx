@@ -24,7 +24,7 @@ export default function AdminCentersPage() {
   const phoneOk = /^0\d{8,9}$/.test(phone.trim());
   const valid = mode === "add"
     ? nameOk && phoneOk && password.length >= 4 && !!(address.trim() && addr.province && addr.district && addr.subdistrict)
-    : nameOk && phoneOk; // แก้ไข: ชื่อ+เบอร์พอ (ที่อยู่แก้ได้ตามต้องการ)
+    : nameOk && phoneOk && (password.trim() === "" || password.trim().length >= 4); // แก้ไข: ชื่อ+เบอร์พอ, รหัสผ่านเว้นว่าง=ไม่เปลี่ยน
 
   const reset = () => { setName(""); setPhone(""); setPassword(""); setAddress(""); setAddr({ province: "", district: "", subdistrict: "" }); };
   const openAdd = () => { reset(); setEditId(null); setMode("add"); };
@@ -40,7 +40,7 @@ export default function AdminCentersPage() {
     if (mode === "add") {
       addCenter({ name, phone, password, address, province: addr.province, district: addr.district, subdistrict: addr.subdistrict });
     } else if (editId) {
-      updateCenter(editId, { name, phone, address, province: addr.province, district: addr.district, subdistrict: addr.subdistrict });
+      updateCenter(editId, { name, phone, password: password.trim() || undefined, address, province: addr.province, district: addr.district, subdistrict: addr.subdistrict });
     }
     reset(); close();
   };
@@ -128,15 +128,13 @@ export default function AdminCentersPage() {
               <input className="input pl-9" inputMode="numeric" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} placeholder="08x-xxx-xxxx" />
             </div>
           </div>
-          {mode === "add" && (
-            <div>
-              <label className="label">รหัสผ่าน (บริษัทตั้งให้)</label>
-              <div className="relative">
-                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                <input className="input pl-9" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="อย่างน้อย 4 ตัวอักษร" />
-              </div>
+          <div>
+            <label className="label">{mode === "edit" ? "ตั้งรหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)" : "รหัสผ่าน (บริษัทตั้งให้)"}</label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <input className="input pl-9" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === "edit" ? "เว้นว่าง = ใช้รหัสเดิม" : "อย่างน้อย 4 ตัวอักษร"} />
             </div>
-          )}
+          </div>
           <div>
             <label className="label">ที่อยู่ / จุดสังเกต</label>
             <div className="relative">
