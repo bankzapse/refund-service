@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fileToDataUrl } from "@/lib/image";
 import { THAI_BANKS } from "@/lib/banks";
@@ -16,18 +16,28 @@ const STATUS_META: Record<PayoutStatus, { label: string; cls: string; icon: Reac
 
 export function PayoutCard() {
   const { currentUser, submitPayout } = useStore();
-  const p = currentUser?.payout;
-  const status: PayoutStatus = p?.status ?? "none";
-  const meta = STATUS_META[status];
+  const real = currentUser?.payout;
 
-  const [editing, setEditing] = useState(status === "none");
-  const [bankName, setBankName] = useState(p?.bankName ?? "");
-  const [accountNo, setAccountNo] = useState(p?.accountNo ?? "");
-  const [accountName, setAccountName] = useState(p?.accountName ?? currentUser?.name ?? "");
-  const [image, setImage] = useState<string | undefined>(p?.bookBankImage);
+  const [editing, setEditing] = useState((real?.status ?? "none") === "none");
+  const [bankName, setBankName] = useState(real?.bankName ?? "");
+  const [accountNo, setAccountNo] = useState(real?.accountNo ?? "");
+  const [accountName, setAccountName] = useState(real?.accountName ?? currentUser?.name ?? "");
+  const [image, setImage] = useState<string | undefined>(real?.bookBankImage);
+  const [submitted, setSubmitted] = useState(false); // เพิ่งกดส่ง — โชว์ "รอการดำเนินการ" ทันทีก่อนโหลดใหม่เสร็จ
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // เมื่อข้อมูลจริงตามมาเป็น pending แล้ว (โหลดใหม่เสร็จ) → เลิกโหมด optimistic
+  useEffect(() => { if (real?.status === "pending") setSubmitted(false); }, [real?.status]);
+
+  // แสดงผลแบบ optimistic: หลังกดส่ง ให้ขึ้น "รอการดำเนินการ" ทันที (ใช้ข้อมูลที่เพิ่งกรอก) จนกว่าข้อมูลจริงจะมา
+  const optimistic = submitted
+    ? { bankName: bankName.trim(), accountNo: accountNo.trim(), accountName: accountName.trim(), bookBankImage: image, status: "pending" as const, note: undefined as string | undefined }
+    : null;
+  const p = optimistic ?? real;
+  const status: PayoutStatus = p?.status ?? "none";
+  const meta = STATUS_META[status];
 
   const onPick = async (f?: File) => {
     if (!f) return;
@@ -46,6 +56,7 @@ export function PayoutCard() {
     if (!bankName.trim() || !accountNo.trim() || !accountName.trim()) return setErr("กรอกธนาคาร เลขบัญชี และชื่อบัญชีให้ครบ");
     if (!image) return setErr("แนบสำเนาหน้า book bank เพื่อยืนยัน");
     submitPayout({ bankName, accountNo, accountName, bookBankImage: image });
+    setSubmitted(true); // ขึ้น "รอการดำเนินการ" ทันที
     setEditing(false);
   };
 

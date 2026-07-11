@@ -193,6 +193,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const d = await withTimeout(repo.loadAll(sbRef.current), 20000, "โหลดข้อมูลช้า");
         setDb(d);
+        // อัปเดตโปรไฟล์ของตัวเองด้วย (payout/เครดิต/ฯลฯ ที่เปลี่ยนจาก write ของเราเอง)
+        // currentUser ฝั่ง Supabase มาจาก sbUser — ถ้าไม่ sync ที่นี่ สถานะของตัวเองจะไม่อัปเดตจนกว่าจะรีเฟรชหน้า
+        setSbUser((prev) => (prev ? d.users.find((u) => u.id === prev.id) ?? prev : prev));
       } catch {
         /* ช้า/ล้มเหลว — คงข้อมูลเดิม */
       }
