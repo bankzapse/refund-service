@@ -168,6 +168,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(() => createInitialDB());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [sbUser, setSbUser] = useState<User | null>(null); // production: จาก Supabase session
+  // บทบาทที่ใช้งาน เก็บฝั่ง browser (แต่ละเครื่องแยกกัน) → 1 บัญชีเปิดหลายบทบาทพร้อมกันได้
+  const [activeRole, setActiveRoleState] = useState<Role | null>(null);
+  const setActiveRole = useCallback((r: Role | null) => {
+    setActiveRoleState(r);
+    try { if (r) localStorage.setItem("rf_active_role", r); else localStorage.removeItem("rf_active_role"); } catch { /* ignore */ }
+  }, []);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [pending, setPending] = useState(0); // ตัวนับงานที่กำลังประมวลผล → loading bar
   const startPending = useCallback(() => setPending((n) => n + 1), []);
@@ -198,6 +204,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (rawDb) setDb(JSON.parse(rawDb));
       const rawUser = localStorage.getItem(USER_KEY);
       if (rawUser) setCurrentUserId(rawUser);
+      const rawRole = localStorage.getItem("rf_active_role");
+      if (rawRole) setActiveRoleState(rawRole as Role);
     } catch {
       /* ignore corrupt storage */
     }
@@ -263,7 +271,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(USER_KEY);
   }, [currentUserId, storageReady]);
 
-  const currentUser = supabaseConfigured ? sbUser : db.users.find((u) => u.id === currentUserId) ?? null;
+  const baseUser = supabaseConfigured ? sbUser : db.users.find((u) => u.id === currentUserId) ?? null;
+  // ใช้บทบาทที่เลือกไว้ฝั่ง browser (ถ้าบัญชีมีสิทธิ์) — ต่าง browser เป็นคนละบทบาทได้พร้อมกัน
+  const currentUser =
+    baseUser && activeRole && (baseUser.roles ?? [baseUser.role]).includes(activeRole)
+      ? { ...baseUser, role: activeRole }
+      : baseUser;
 
   const pushToast = useCallback((text: string, kind: Toast["kind"] = "success") => {
     const id = uid("toast-");
@@ -324,39 +337,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ---- auth ----
-  const loginAs = useCallback((userId: string) => setCurrentUserId(userId), []);
+  const loginAs = useCallback((userId: string) => { setActiveRole(null); setCurrentUserId(userId); }, [setActiveRole]);
 
-  // สลับบทบาทที่ใช้งาน (multi-role) — เปลี่ยน active role ถ้าบัญชีถือบทบาทนั้น
+  // สลับบทบาทที่ใช้งาน (multi-role) — เก็บฝั่ง browser (ทันที ไม่ต้องต่อ DB) → แต่ละ browser เป็นคนละบทบาทได้พร้อมกัน
   const switchRole = useCallback(
     async (target: Role, forUserId?: string): Promise<boolean> => {
       const u = supabaseConfigured ? sbUser : db.users.find((x) => x.id === (forUserId ?? currentUserId));
       if (!u) return false;
       const allowed = u.roles ?? [u.role];
       if (!allowed.includes(target)) { pushToast("บัญชีนี้ไม่มีบทบาทดังกล่าว", "info"); return false; }
-      if (u.role === target) return true;
-      if (supabaseConfigured) {
-        startPending();
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = (await withTimeout(sbRef.current.rpc("set_active_role", { p_role: target }), 12000, "สลับบทบาทช้า")) as any;
-          if (error) { pushToast(friendlyError(error, "สลับบทบาทไม่สำเร็จ"), "info"); return false; }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: prof } = (await withTimeout(sbRef.current.from("profiles").select("*").eq("id", u.id).single(), 12000, "โหลดโปรไฟล์ช้า")) as any;
-          if (prof) setSbUser(profileToUser(prof));
-          refresh(); // โหลดข้อมูลอื่นเบื้องหลัง ไม่บล็อกการสลับบทบาท
-          return true;
-        } catch (e) {
-          pushToast(friendlyError(e, "สลับบทบาทไม่สำเร็จ"), "info");
-          return false;
-        } finally {
-          endPending();
-        }
-      }
-      // เดโม: อัปเดต active role ในเครื่อง
-      setDb((d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, role: target } : x)) }));
+      setActiveRole(target); // client-side ล้วน — currentUser จะสะท้อนบทบาทใหม่ทันที
       return true;
     },
-    [sbUser, db.users, currentUserId, pushToast, refresh, startPending, endPending],
+    [sbUser, db.users, currentUserId, pushToast, setActiveRole],
   );
   const findByPhone = useCallback(
     (phone: string) => db.users.find((u) => u.phone === phone.trim()),
@@ -472,13 +465,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    setActiveRole(null); // เคลียร์บทบาทที่เลือกไว้ในเครื่อง
     if (supabaseConfigured) {
       createClient().auth.signOut();
       setSbUser(null);
     } else {
       setCurrentUserId(null);
     }
-  }, []);
+  }, [setActiveRole]);
 
   const deleteAccount = useCallback(async () => {
     if (!currentUser) return;
