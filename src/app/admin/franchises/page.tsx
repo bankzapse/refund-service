@@ -56,7 +56,12 @@ export default function AdminFranchisesPage() {
   // แก้ไข / ลบ แฟรนไชส์
   const [editFr, setEditFr] = useState<FranchiseWithStats | null>(null);
   const [ef, setEf] = useState({ name: "", ownerName: "", phone: "", password: "" });
-  const openEdit = (f: FranchiseWithStats) => { setEf({ name: f.name, ownerName: f.ownerName ?? "", phone: f.phone ?? "", password: "" }); setEditFr(f); };
+  const openEdit = (f: FranchiseWithStats) => {
+    // ใช้เบอร์ "เข้าระบบ" จริงของเจ้าของ (บัญชี role=franchise) ไม่ใช่เบอร์ติดต่อในตารางแฟรนไชส์
+    const owner = db.users.find((u) => u.role === "franchise" && u.franchiseId === f.id);
+    setEf({ name: f.name, ownerName: f.ownerName ?? "", phone: owner?.phone || f.phone || "", password: "" });
+    setEditFr(f);
+  };
   const saveEdit = () => {
     if (!editFr) return;
     editFranchise(editFr.id, { name: ef.name, ownerName: ef.ownerName, phone: ef.phone, password: ef.password || undefined });

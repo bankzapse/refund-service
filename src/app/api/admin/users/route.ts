@@ -49,28 +49,38 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, id: fr.id });
       }
       case "updateFranchise": {
-        const { franchiseId, name, ownerName, phone, password } = body;
+        const { franchiseId, name, ownerName, password } = body;
         if (!franchiseId) return bad("missing franchiseId");
-        if (phone != null && phone !== "" && !/^0\d{8,9}$/.test(String(phone).trim())) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
+        const newPhone = body.phone != null && body.phone !== "" ? String(body.phone).trim() : "";
+        if (newPhone && !/^0\d{8,9}$/.test(newPhone)) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
         if (password != null && password !== "" && String(password).length < 4) return bad("รหัสผ่านอย่างน้อย 4 ตัวอักษร");
-        // 1) แก้ข้อมูลแฟรนไชส์
+        // 1) แก้ข้อมูลแฟรนไชส์ (ชื่อ/เจ้าของ/เบอร์ติดต่อ)
         const frPatch: Record<string, unknown> = {};
         if (name != null) frPatch.name = String(name).trim();
         if (ownerName != null) frPatch.owner_name = String(ownerName).trim();
-        if (phone != null && phone !== "") frPatch.phone = String(phone).trim();
+        if (newPhone) frPatch.phone = newPhone;
         if (Object.keys(frPatch).length) await table("franchises").update(frPatch).eq("id", franchiseId);
         // 2) แก้บัญชีเข้าระบบของเจ้าของแฟรนไชส์ (role=franchise ที่ผูกกับแฟรนไชส์นี้)
         const { data: owners } = await table("profiles").select("id").eq("franchise_id", franchiseId).eq("role", "franchise");
         const ownerId = (owners as { id: string }[] | null)?.[0]?.id;
         if (ownerId) {
-          const authPatch: Record<string, unknown> = {};
-          if (phone != null && phone !== "") authPatch.phone = toE164(phone);
-          if (password) authPatch.password = String(password);
-          if (Object.keys(authPatch).length) await admin.auth.admin.updateUserById(ownerId, authPatch);
-          const profPatch: Record<string, unknown> = {};
-          if (ownerName != null) profPatch.name = String(ownerName).trim();
-          if (phone != null && phone !== "") profPatch.phone = String(phone).trim();
-          if (Object.keys(profPatch).length) await table("profiles").update(profPatch).eq("id", ownerId);
+          // เปลี่ยนรหัสผ่าน — แยกจากเบอร์ เพื่อไม่ให้เบอร์ชนแล้วรหัสผ่านพังตาม
+          if (password) {
+            const { error } = await admin.auth.admin.updateUserById(ownerId, { password: String(password) });
+            if (error) return bad(error.message, 500);
+          }
+          // เปลี่ยนเบอร์เข้าระบบ เฉพาะเมื่อ "ต่างจากเบอร์ปัจจุบัน" (กันชนเบอร์ตัวเองแล้ว error)
+          if (newPhone) {
+            const { data: cur } = await admin.auth.admin.getUserById(ownerId);
+            const curPhone = cur?.user?.phone ?? ""; // GoTrue คืน E164 ไม่มี + เช่น 66800000001
+            const targetBare = toE164(newPhone).replace(/^\+/, "");
+            if (curPhone !== targetBare) {
+              const { error } = await admin.auth.admin.updateUserById(ownerId, { phone: toE164(newPhone) });
+              if (error) return bad(/registered|already|exists|duplicate/i.test(error.message) ? "เบอร์นี้มีบัญชีอื่นใช้อยู่แล้ว" : error.message, 400);
+              await table("profiles").update({ phone: newPhone }).eq("id", ownerId);
+            }
+          }
+          if (ownerName != null) await table("profiles").update({ name: String(ownerName).trim() }).eq("id", ownerId);
         }
         return NextResponse.json({ ok: true });
       }
@@ -95,19 +105,31 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, id: created.user.id });
       }
       case "updateCenter": {
-        const { userId, name, phone, password, address, province, district, subdistrict } = body;
+        const { userId, name, address, province, district, subdistrict } = body;
         if (!userId) return bad("missing userId");
-        if (phone != null && phone !== "" && !/^0\d{8,9}$/.test(String(phone).trim())) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
+        const newPhone = body.phone != null && body.phone !== "" ? String(body.phone).trim() : "";
+        const password = body.password;
+        if (newPhone && !/^0\d{8,9}$/.test(newPhone)) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
         if (password != null && password !== "" && String(password).length < 4) return bad("รหัสผ่านอย่างน้อย 4 ตัวอักษร");
         await table("profiles").update({
           ...(name != null ? { name: String(name).trim() } : {}),
-          ...(phone != null ? { phone: String(phone).trim() } : {}),
+          ...(newPhone ? { phone: newPhone } : {}),
           address: address ?? null, province: province ?? null, district: district ?? null, subdistrict: subdistrict ?? null,
         }).eq("id", userId).eq("role", "buyer");
-        const authPatch: Record<string, unknown> = {};
-        if (phone) authPatch.phone = toE164(phone);
-        if (password) authPatch.password = String(password);
-        if (Object.keys(authPatch).length) await admin.auth.admin.updateUserById(userId, authPatch);
+        // รหัสผ่าน — แยกจากเบอร์
+        if (password) {
+          const { error } = await admin.auth.admin.updateUserById(userId, { password: String(password) });
+          if (error) return bad(error.message, 500);
+        }
+        // เบอร์เข้าระบบ — เฉพาะเมื่อต่างจากเบอร์ปัจจุบัน
+        if (newPhone) {
+          const { data: cur } = await admin.auth.admin.getUserById(userId);
+          const targetBare = toE164(newPhone).replace(/^\+/, "");
+          if ((cur?.user?.phone ?? "") !== targetBare) {
+            const { error } = await admin.auth.admin.updateUserById(userId, { phone: toE164(newPhone) });
+            if (error) return bad(/registered|already|exists|duplicate/i.test(error.message) ? "เบอร์นี้มีบัญชีอื่นใช้อยู่แล้ว" : error.message, 400);
+          }
+        }
         return NextResponse.json({ ok: true });
       }
       case "removeCenter": {
