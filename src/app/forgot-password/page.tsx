@@ -36,8 +36,8 @@ function ForgotForm() {
     setBusy(true);
     try {
       if (supabaseConfigured) {
-        // Supabase ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK)
-        const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone) });
+        // Supabase ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK) — เฉพาะบัญชีที่มีอยู่ (ไม่สร้างใหม่)
+        const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone), options: { shouldCreateUser: false } });
         if (error) return setErr(friendlyError(error));
         setSmsMode(true);
         return setStep(2);
