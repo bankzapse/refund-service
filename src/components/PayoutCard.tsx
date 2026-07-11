@@ -5,13 +5,13 @@ import { useStore } from "@/lib/store";
 import { fileToDataUrl } from "@/lib/image";
 import { THAI_BANKS } from "@/lib/banks";
 import type { PayoutStatus } from "@/lib/types";
-import { Landmark, Upload, CheckCircle2, Clock, XCircle, Pencil, Loader2 } from "lucide-react";
+import { Landmark, Upload, CheckCircle2, Clock, XCircle, Pencil, Loader2, RefreshCw } from "lucide-react";
 
 const STATUS_META: Record<PayoutStatus, { label: string; cls: string; icon: React.ElementType }> = {
   none: { label: "ยังไม่ได้เพิ่มบัญชี", cls: "bg-neutral-100 text-neutral-500", icon: Landmark },
-  pending: { label: "รอบริษัทอนุมัติ", cls: "bg-amber-100 text-amber-700", icon: Clock },
+  pending: { label: "รอการดำเนินการ", cls: "bg-amber-100 text-amber-700", icon: Clock },
   approved: { label: "อนุมัติแล้ว", cls: "bg-brand-100 text-brand-700", icon: CheckCircle2 },
-  rejected: { label: "ถูกปฏิเสธ", cls: "bg-red-100 text-red-600", icon: XCircle },
+  rejected: { label: "ไม่สำเร็จ", cls: "bg-red-100 text-red-600", icon: XCircle },
 };
 
 export function PayoutCard() {
@@ -60,8 +60,11 @@ export function PayoutCard() {
         <span className={`chip ${meta.cls}`}><meta.icon className="h-3.5 w-3.5" /> {meta.label}</span>
       </div>
 
-      {status === "rejected" && p?.note && !editing && (
-        <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-600 ring-1 ring-red-100">เหตุผล: {p.note}</p>
+      {status === "pending" && !editing && (
+        <p className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-700 ring-1 ring-amber-100">ส่งคำขอแล้ว — บริษัทกำลังตรวจสอบบัญชี รอการดำเนินการ</p>
+      )}
+      {status === "rejected" && !editing && (
+        <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-600 ring-1 ring-red-100">คำขอไม่สำเร็จ{p?.note ? ` — เหตุผล: ${p.note}` : ""} · กด “ส่งคำขอใหม่” เพื่อยื่นอีกครั้ง</p>
       )}
       {status === "approved" && (
         <p className="mb-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700 ring-1 ring-brand-100">พร้อมรับเงินโอนจากบริษัทแล้ว</p>
@@ -75,7 +78,11 @@ export function PayoutCard() {
             <Row label="ชื่อบัญชี" value={p.accountName} />
           </div>
           {p.bookBankImage && <img src={p.bookBankImage} alt="book bank" className="mt-2 max-h-40 w-full rounded-xl object-cover ring-1 ring-neutral-100" />}
-          <button onClick={() => setEditing(true)} className="btn-outline mt-3 w-full"><Pencil className="h-4 w-4" /> แก้ไขบัญชี</button>
+          {status === "rejected" ? (
+            <button onClick={() => setEditing(true)} className="btn-primary mt-3 w-full"><RefreshCw className="h-4 w-4" /> ส่งคำขอใหม่</button>
+          ) : (
+            <button onClick={() => setEditing(true)} className="btn-outline mt-3 w-full"><Pencil className="h-4 w-4" /> แก้ไขบัญชี</button>
+          )}
         </>
       ) : (
         <div className="space-y-3">

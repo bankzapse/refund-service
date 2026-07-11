@@ -1058,7 +1058,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (supabaseConfigured)
         return sbWrite(
           (sb) => repo.submitPayout(sb, { bankName: input.bankName.trim(), accountNo: input.accountNo.trim(), accountName: input.accountName.trim(), bookBankImage: input.bookBankImage ?? currentUser.payout?.bookBankImage }),
-          "ส่งข้อมูลบัญชีแล้ว — รอบริษัทอนุมัติ",
+          "ส่งคำขอแล้ว — รอการดำเนินการ",
           "success",
         );
       const payout: PayoutAccount = {
@@ -1070,7 +1070,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         submittedAt: todayISO(),
       };
       setDb((d) => ({ ...d, users: d.users.map((u) => (u.id === currentUser.id ? { ...u, payout } : u)) }));
-      pushToast("ส่งข้อมูลบัญชีแล้ว — รอบริษัทอนุมัติ", "success");
+      pushToast("ส่งคำขอแล้ว — รอการดำเนินการ", "success");
     },
     [currentUser, pushToast, sbWrite],
   );
