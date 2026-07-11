@@ -1,6 +1,6 @@
 import type {
   Bill, BillItem, Expense, Job, RewardDraw, RewardTicket, ScheduleSlot, User, WalletTxn,
-  Cabinet, MeshBag, BagItem, PointTxn, Redemption, Franchise, FranchisePayout,
+  Cabinet, MeshBag, BagItem, PointTxn, Redemption, Franchise, FranchisePayout, FactorySale,
 } from "./types";
 import { bagQr } from "./types";
 import { MATERIALS, MATERIAL_MAP } from "./materials";
@@ -24,6 +24,8 @@ export interface DB {
   franchisePayouts: FranchisePayout[]; // บริษัทโอนส่วนแบ่งให้แฟรนไชส์
   buyerPrices: Record<string, Record<string, number>>; // buyerId → materialId → ราคารับซื้อ
   centralPrices: Record<string, number>; // ราคากลาง (แอดมินตั้ง) → override ค่า default
+  factoryPrices: Record<string, number>; // ราคาขายโรงงานของเก่า/กก. (บริษัทตั้ง) → materialId → ราคา
+  factorySales: FactorySale[]; // บันทึกการขายให้โรงงาน (กำไรบริษัทชั้นที่ 3)
   pricesUpdatedAt: string;
 }
 
@@ -476,6 +478,9 @@ export function createInitialDB(): DB {
       "u-buyer2": { cardboard: 5, pet: 12, "aluminum-can": 40 },
     },
     centralPrices: {},
+    // ราคาขายโรงงาน/กก. (สูงกว่าราคาที่จ่ายผู้ขาย → ส่วนต่างเป็นกำไรบริษัท)
+    factoryPrices: { "aluminum-can": 55, pet: 14, hdpe: 17, pp5: 9, "glass-bottle": 3, cardboard: 6 },
+    factorySales: [],
     pricesUpdatedAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0).toISOString(),
   };
 }

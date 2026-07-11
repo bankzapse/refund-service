@@ -6,6 +6,7 @@ export const ADMIN_MENUS: { key: string; label: string }[] = [
   { key: "franchises", label: "แฟรนไชส์" },
   { key: "centers", label: "ศูนย์คัดแยก" },
   { key: "scrap", label: "ราคาของเก่า" },
+  { key: "factory", label: "กำไรโรงงาน" },
   { key: "collect", label: "เก็บของ" },
   { key: "payouts", label: "อนุมัติบัญชี" },
   { key: "payments", label: "โอนเงิน" },

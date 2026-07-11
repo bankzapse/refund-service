@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { Bill, BillItem, Expense, Job, JobStatus, Role, ScheduleSlot, User, WalletTxn, MeshBag, BagItem, PointTxn, Redemption, Cabinet, Franchise, PayoutAccount, FranchisePayout } from "./types";
+import type { Bill, BillItem, Expense, Job, JobStatus, Role, ScheduleSlot, User, WalletTxn, MeshBag, BagItem, PointTxn, Redemption, Cabinet, Franchise, PayoutAccount, FranchisePayout, FactorySale, FactorySaleItem } from "./types";
 import { POINTS_PER_BAHT, bagQr } from "./types";
 import { createInitialDB, type DB } from "./seed";
 import { billCode, jobCode, ticketNumber, todayISO, uid, currentMonth } from "./utils";
@@ -137,6 +137,8 @@ interface StoreValue {
   removeAdmin: (userId: string) => void;
   setAdminPermissions: (userId: string, permissions: string[]) => void;
   setCentralPrice: (materialId: string, price: number) => void;
+  setFactoryPrice: (materialId: string, price: number) => void;
+  recordFactorySale: (items: FactorySaleItem[], factoryName?: string, note?: string) => boolean;
   setDrawPrize: (month: string, prizeName: string, prizeValue: number) => void;
   drawWinner: (month: string) => void;
   // credit / wallet
@@ -876,6 +878,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [sbWrite],
   );
 
+  // บริษัทตั้งราคาขายโรงงานของเก่า/กก.
+  const setFactoryPrice = useCallback(
+    (materialId: string, price: number) => {
+      const v = Math.max(0, Math.round(price));
+      if (supabaseConfigured) return sbWrite((sb) => repo.setFactoryPrice(sb, materialId, v));
+      setDb((d) => ({ ...d, factoryPrices: { ...d.factoryPrices, [materialId]: v } }));
+    },
+    [sbWrite],
+  );
+
+  // ศูนย์คัดแยกบันทึกการขายวัสดุให้โรงงาน → ส่วนต่างเป็นกำไรบริษัท
+  const recordFactorySale = useCallback(
+    (items: FactorySaleItem[], factoryName?: string, note?: string): boolean => {
+      const clean = items.filter((it) => it.qtyKg > 0 && it.factoryPrice >= 0);
+      if (!clean.length) { pushToast("กรอกน้ำหนัก (กก.) และราคาขายอย่างน้อย 1 วัสดุ", "info"); return false; }
+      const revenue = clean.reduce((s, it) => s + it.revenue, 0);
+      const cost = clean.reduce((s, it) => s + it.cost, 0);
+      if (supabaseConfigured) {
+        sbWrite((sb) => repo.recordFactorySale(sb, clean, factoryName?.trim() || undefined, note?.trim() || undefined), `บันทึกการขายให้โรงงานแล้ว — กำไร ฿${Math.round(revenue - cost).toLocaleString()}`, "success");
+        return true;
+      }
+      const sale: FactorySale = {
+        id: uid("fs-"), soldBy: currentUser?.id ?? "", soldByName: currentUser?.name ?? "",
+        factoryName: factoryName?.trim() || undefined, note: note?.trim() || undefined,
+        items: clean, revenue, cost, profit: revenue - cost, soldAt: todayISO(),
+      };
+      setDb((d) => ({ ...d, factorySales: [sale, ...(d.factorySales ?? [])] }));
+      pushToast(`บันทึกการขายให้โรงงานแล้ว — กำไร ฿${Math.round(revenue - cost).toLocaleString()}`, "success");
+      return true;
+    },
+    [currentUser, sbWrite, pushToast],
+  );
+
   const setDrawPrize = useCallback(
     (month: string, prizeName: string, prizeValue: number) => {
       if (supabaseConfigured) return sbWrite((sb) => repo.setDrawPrize(sb, month, prizeName, prizeValue));
@@ -1338,6 +1373,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     removeExpense,
     setUserStatus,
     setCentralPrice,
+    setFactoryPrice,
+    recordFactorySale,
     setDrawPrize,
     drawWinner,
     topUpCredit,

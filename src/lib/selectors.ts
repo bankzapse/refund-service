@@ -71,6 +71,44 @@ export function centralPrice(db: DB, materialId: string): number {
   return db.centralPrices?.[materialId] ?? MATERIAL_MAP[materialId]?.pricePerUnit ?? 0;
 }
 
+/** ราคาขายโรงงานของเก่า/กก. (บริษัทตั้ง) */
+export function factoryPrice(db: DB, materialId: string): number {
+  return db.factoryPrices?.[materialId] ?? 0;
+}
+
+/** สรุปกำไรจากการขายให้โรงงานของเก่า (ชั้นกำไรที่ 3 ของบริษัท) */
+export interface FactoryProfitSummary {
+  revenue: number; // รายได้รวมจากโรงงาน
+  cost: number; // ต้นทุนรวม (จ่ายผู้ขาย)
+  profit: number; // กำไรรวม
+  marginPct: number; // กำไร/รายได้ (%)
+  saleCount: number;
+  totalKg: number;
+  byMaterial: { materialId: string; name: string; kg: number; revenue: number; cost: number; profit: number }[];
+}
+export function factoryProfitSummary(db: DB, since?: Date): FactoryProfitSummary {
+  const cutoff = since?.toISOString();
+  const sales = (db.factorySales ?? []).filter((s) => !cutoff || s.soldAt >= cutoff);
+  const byMat = new Map<string, { materialId: string; name: string; kg: number; revenue: number; cost: number; profit: number }>();
+  let revenue = 0, cost = 0, totalKg = 0;
+  for (const s of sales) {
+    for (const it of s.items ?? []) {
+      revenue += it.revenue; cost += it.cost; totalKg += it.qtyKg;
+      const m = byMat.get(it.materialId) ?? { materialId: it.materialId, name: it.name, kg: 0, revenue: 0, cost: 0, profit: 0 };
+      m.kg += it.qtyKg; m.revenue += it.revenue; m.cost += it.cost; m.profit += it.profit;
+      byMat.set(it.materialId, m);
+    }
+  }
+  const profit = revenue - cost;
+  return {
+    revenue, cost, profit,
+    marginPct: revenue > 0 ? (profit / revenue) * 100 : 0,
+    saleCount: sales.length,
+    totalKg,
+    byMaterial: [...byMat.values()].sort((a, b) => b.profit - a.profit),
+  };
+}
+
 /** ราคารับซื้อของคนขับ (ราคาที่ตั้งเอง หรือราคากลาง) */
 export function buyerPrice(db: DB, buyerId: string, materialId: string): number {
   return db.buyerPrices?.[buyerId]?.[materialId] ?? centralPrice(db, materialId);

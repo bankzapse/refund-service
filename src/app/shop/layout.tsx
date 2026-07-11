@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { Logo } from "@/components/Logo";
 import { BootLoader, ConsoleSkeleton } from "@/components/ui";
-import { LayoutDashboard, ReceiptText, Wallet, Tag, LogOut, LayoutGrid, Plus, Box } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Wallet, Tag, LogOut, LayoutGrid, Plus, Box, Factory } from "lucide-react";
 
 const NAV = [
   { href: "/shop", label: "ภาพรวม", icon: LayoutDashboard, exact: true, pickup: true },
   { href: "/shop/cabinets", label: "ตู้ Drop Bag", icon: Box, pickup: false },
+  { href: "/shop/factory", label: "ขายโรงงาน", icon: Factory, pickup: false },
   { href: "/shop/bills", label: "บิลรับซื้อ", icon: ReceiptText, pickup: true },
   { href: "/shop/accounting", label: "บัญชี", icon: Wallet, pickup: true },
   { href: "/shop/prices", label: "ราคา/วัสดุ", icon: Tag, pickup: true },

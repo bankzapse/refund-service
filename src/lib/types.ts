@@ -281,6 +281,32 @@ export interface BagItem {
   subtotal: number;
 }
 
+/** รายการวัสดุในการขายให้โรงงานของเก่า (ต่อ 1 การขาย) */
+export interface FactorySaleItem {
+  materialId: string;
+  name: string;
+  qtyKg: number; // น้ำหนักที่ขาย (กก.)
+  factoryPrice: number; // ราคาขายโรงงาน/กก.
+  sellerPrice: number; // ราคาที่จ่ายผู้ขาย/กก. (ต้นทุน = ราคากลาง)
+  revenue: number; // = qtyKg × factoryPrice
+  cost: number; // = qtyKg × sellerPrice
+  profit: number; // = revenue − cost
+}
+
+/** บันทึกการขายวัสดุคัดแยกให้โรงงานของเก่า → ส่วนต่างเป็นกำไรบริษัท (ชั้นที่ 3) */
+export interface FactorySale {
+  id: string;
+  soldBy: string; // userId ศูนย์คัดแยกที่บันทึก
+  soldByName: string;
+  factoryName?: string; // ชื่อโรงงานของเก่า (ไม่บังคับ)
+  note?: string;
+  items: FactorySaleItem[];
+  revenue: number; // รายได้รวมจากโรงงาน
+  cost: number; // ต้นทุนรวม (จ่ายผู้ขาย)
+  profit: number; // กำไรรวม = revenue − cost
+  soldAt: string;
+}
+
 export interface MeshBag {
   id: string;
   code: string; // รหัสถุง 7 หลัก เช่น "0000001"

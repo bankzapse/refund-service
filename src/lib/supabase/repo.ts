@@ -72,7 +72,7 @@ function toExpense(e: any): Expense {
 
 /** โหลดข้อมูลทั้งหมดที่ user เห็น (RLS คัดกรองให้) → รูป DB */
 export async function loadAll(sb: any): Promise<DB> {
-  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet, cabs, meshBags, bagItems, pointTxns, redemptions, franchises, franchisePayoutsRes] =
+  const [users, prices, bprices, slots, jobs, jobItems, jobHist, bills, billItems, expenses, tickets, draws, wallet, cabs, meshBags, bagItems, pointTxns, redemptions, franchises, franchisePayoutsRes, factorySalesRes] =
     await Promise.all([
       sb.from("profiles").select("*"),
       sb.from("material_prices").select("*"),
@@ -94,14 +94,19 @@ export async function loadAll(sb: any): Promise<DB> {
       sb.from("redemptions").select("*"),
       sb.from("franchises").select("*"),
       sb.from("franchise_payouts").select("*"),
+      sb.from("factory_sales").select("*"),
     ]);
 
   const userRows: any[] = users.data ?? [];
   const nameById = new Map<string, string>(userRows.map((u) => [u.id, u.name]));
 
-  // central prices
+  // central prices + factory sell prices
   const centralPrices: Record<string, number> = {};
-  (prices.data ?? []).forEach((p: any) => (centralPrices[p.id] = Number(p.price_per_unit)));
+  const factoryPrices: Record<string, number> = {};
+  (prices.data ?? []).forEach((p: any) => {
+    centralPrices[p.id] = Number(p.price_per_unit);
+    if (p.factory_price_per_unit != null) factoryPrices[p.id] = Number(p.factory_price_per_unit);
+  });
 
   // buyer prices
   const buyerPrices: Record<string, Record<string, number>> = {};
@@ -148,6 +153,13 @@ export async function loadAll(sb: any): Promise<DB> {
     expenses: (expenses.data ?? []).map(toExpense),
     buyerPrices,
     centralPrices,
+    factoryPrices,
+    factorySales: (factorySalesRes.data ?? []).map((r: any) => ({
+      id: r.id, soldBy: r.sold_by ?? "", soldByName: nameById.get(r.sold_by) ?? "",
+      factoryName: r.factory_name ?? undefined, note: r.note ?? undefined,
+      items: Array.isArray(r.items) ? r.items : [],
+      revenue: Number(r.revenue), cost: Number(r.cost), profit: Number(r.profit), soldAt: r.sold_at,
+    })),
     wallet: (wallet.data ?? []).map(toWallet),
     // Drop & Go
     franchises: (franchises.data ?? []).map(toFranchise),
@@ -231,6 +243,10 @@ export const redeemPoints = (sb: any, amountBaht: number, points: number, method
   sb.rpc("redeem_points", { p_amount: amountBaht, p_points: points, p_method: method, p_account: account });
 export const setRedemptionStatus = (sb: any, id: string, status: string) =>
   sb.rpc("set_redemption_status", { p_id: id, p_status: status });
+export const recordFactorySale = (sb: any, items: unknown[], factoryName?: string, note?: string) =>
+  sb.rpc("record_factory_sale", { p_items: items, p_factory_name: factoryName ?? null, p_note: note ?? null });
+export const setFactoryPrice = (sb: any, materialId: string, price: number) =>
+  sb.rpc("set_factory_price", { p_material_id: materialId, p_price: price });
 export const addCabinet = async (sb: any, input: { code: string; name: string; address: string; franchiseCode: string; province?: string; district?: string; subdistrict?: string; lat?: number; lng?: number }) => {
   const { data, error } = await sb.rpc("add_cabinet", { p_franchise_code: input.franchiseCode, p_code: input.code, p_name: input.name, p_address: input.address, p_lat: input.lat ?? null, p_lng: input.lng ?? null });
   if (error) throw error;
