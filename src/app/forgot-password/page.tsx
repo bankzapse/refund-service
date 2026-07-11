@@ -6,12 +6,10 @@ import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { AuthShell } from "@/components/AuthShell";
 import { supabaseConfigured } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/authError";
 import { ArrowRight, Loader2, Phone, KeyRound, CheckCircle2 } from "lucide-react";
 
 const PHONE_RE = /^0\d{8,9}$/;
-const toE164 = (p: string) => "+66" + p.trim().replace(/^0/, "");
 
 function ForgotForm() {
   const router = useRouter();
@@ -35,14 +33,8 @@ function ForgotForm() {
     if (!PHONE_RE.test(phone.trim())) return setErr("เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้น 0)");
     setBusy(true);
     try {
-      if (supabaseConfigured) {
-        // Supabase ส่ง OTP ผ่าน Send SMS Hook (→ SMS OK) — เฉพาะบัญชีที่มีอยู่ (ไม่สร้างใหม่)
-        const { error } = await createClient().auth.signInWithOtp({ phone: toE164(phone), options: { shouldCreateUser: false } });
-        if (error) return setErr(friendlyError(error));
-        setSmsMode(true);
-        return setStep(2);
-      }
-      // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
+      // ส่ง OTP ผ่านระบบของแอปเอง (SMS OK ตรงๆ) — ทั้งโหมด Supabase และเดโม
+      // (ไม่พึ่ง Send SMS Hook ของ Supabase ที่อาจตั้งค่าไม่ครบ)
       const r = await fetch("/api/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
       const j = await r.json().catch(() => ({ ok: false }));
       if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "ส่งรหัส OTP ไม่สำเร็จ"));
@@ -62,11 +54,6 @@ function ForgotForm() {
     if (otp.trim().length !== 6) return setErr("กรอกรหัส OTP 6 หลัก");
     setBusy(true);
     try {
-      if (supabaseConfigured) {
-        const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
-        if (error) return setErr(friendlyError(error));
-        return setStep(3); // session แล้ว → ตั้งรหัสใหม่ด้วย updateUser ได้
-      }
       if (smsMode) {
         const v = await fetch("/api/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otp.trim(), token: otpToken }) })
           .then((r) => r.json())
@@ -88,6 +75,14 @@ function ForgotForm() {
     if (password !== confirm) return setErr("รหัสผ่านยืนยันไม่ตรงกัน");
     setBusy(true);
     try {
+      if (supabaseConfigured) {
+        // ตั้งรหัสผ่านใหม่ผ่าน service-role (ยืนยัน OTP อีกครั้งฝั่ง server) — ไม่ต้องมี session
+        const r = await fetch("/api/auth/reset-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), password, code: otp.trim(), token: otpToken }) });
+        const j = await r.json().catch(() => ({ ok: false }));
+        if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "ตั้งรหัสผ่านใหม่ไม่สำเร็จ"));
+        setStep(4);
+        return;
+      }
       const res = await resetPassword(phone, password);
       if (!res.ok) return setErr(res.error ?? "ตั้งรหัสผ่านใหม่ไม่สำเร็จ");
       setStep(4);
