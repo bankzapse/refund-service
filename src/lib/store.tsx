@@ -151,6 +151,8 @@ interface StoreValue {
   addCabinet: (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
   editCabinet: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   addFranchise: (input: { code: string; name: string; ownerName: string; phone: string; password?: string }) => void;
+  editFranchise: (id: string, patch: { name?: string; ownerName?: string; phone?: string; password?: string }) => void;
+  removeFranchise: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -1261,6 +1263,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [db.franchises, pushToast, adminUsersApi],
   );
 
+  // แก้ไขแฟรนไชส์ (ชื่อ/เจ้าของ/เบอร์/รหัสผ่านเข้าระบบ) — บริษัทเท่านั้น
+  const editFranchise = useCallback(
+    (id: string, patch: { name?: string; ownerName?: string; phone?: string; password?: string }) => {
+      if (patch.phone != null && patch.phone.trim() && !/^0\d{8,9}$/.test(patch.phone.trim())) { pushToast("เบอร์ไม่ถูกต้อง (10 หลัก ขึ้นต้น 0)", "info"); return; }
+      if (patch.password && patch.password.length < 4) { pushToast("รหัสผ่านอย่างน้อย 4 ตัวอักษร", "info"); return; }
+      if (supabaseConfigured) {
+        adminUsersApi("updateFranchise", { franchiseId: id, name: patch.name?.trim(), ownerName: patch.ownerName?.trim(), phone: patch.phone?.trim(), password: patch.password || undefined }, "บันทึกข้อมูลแฟรนไชส์แล้ว");
+        return;
+      }
+      setDb((d) => ({
+        ...d,
+        franchises: d.franchises.map((f) => (f.id === id ? { ...f, ...(patch.name != null ? { name: patch.name.trim() || f.name } : {}), ...(patch.ownerName != null ? { ownerName: patch.ownerName.trim() } : {}), ...(patch.phone != null ? { phone: patch.phone.trim() } : {}) } : f)),
+        users: d.users.map((u) => (u.role === "franchise" && u.franchiseId === id ? { ...u, ...(patch.ownerName != null ? { name: patch.ownerName.trim() } : {}), ...(patch.phone != null ? { phone: patch.phone.trim() } : {}), ...(patch.password ? { password: patch.password } : {}) } : u)),
+      }));
+      pushToast("บันทึกข้อมูลแฟรนไชส์แล้ว", "success");
+    },
+    [pushToast, adminUsersApi],
+  );
+
+  // ลบแฟรนไชส์ (พร้อมตู้ + บัญชีเจ้าของ) — บริษัทเท่านั้น
+  const removeFranchise = useCallback(
+    (id: string) => {
+      if (supabaseConfigured) { adminUsersApi("removeFranchise", { franchiseId: id }, "ลบแฟรนไชส์แล้ว"); return; }
+      setDb((d) => ({
+        ...d,
+        franchises: d.franchises.filter((f) => f.id !== id),
+        cabinets: d.cabinets.filter((c) => c.franchiseId !== id),
+        users: d.users.filter((u) => !(u.role === "franchise" && u.franchiseId === id)),
+      }));
+      pushToast("ลบแฟรนไชส์แล้ว", "info");
+    },
+    [pushToast, adminUsersApi],
+  );
+
   const value: StoreValue = {
     ready,
     db,
@@ -1318,6 +1354,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addCabinet,
     editCabinet,
     addFranchise,
+    editFranchise,
+    removeFranchise,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

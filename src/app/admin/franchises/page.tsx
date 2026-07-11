@@ -9,7 +9,7 @@ import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts, cabinetsForF
 import { cabinetFullCode, displayCabinetCode } from "@/lib/types";
 import { formatBaht, thaiDate } from "@/lib/utils";
 import { RevenueExport } from "@/components/RevenueExport";
-import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle, FileSignature, Printer, QrCode, MapPin } from "lucide-react";
+import { Store, Plus, Box, PackageOpen, Coins, Phone, User, Truck, Building2, Wallet, AlertTriangle, FileSignature, Printer, QrCode, MapPin, Pencil, Trash2, KeyRound } from "lucide-react";
 
 const NEAR_FULL = 30; // ถุงค้าง ≥ 30 = ใกล้เต็ม (เข้าเก็บ)
 const FULL = 40; // ≥ 40 = เต็ม
@@ -18,7 +18,7 @@ type CabForm = { name: string; address: string; province: string; district: stri
 const EMPTY_CAB: CabForm = { name: "", address: "", province: "", district: "", subdistrict: "" };
 
 export default function AdminFranchisesPage() {
-  const { db, addFranchise, addCabinet } = useStore();
+  const { db, addFranchise, addCabinet, editFranchise, removeFranchise } = useStore();
   const franchises = franchisesWithStats(db);
   const nearFull = cabinetsWithCounts(db)
     .filter((c) => c.pending >= NEAR_FULL)
@@ -52,6 +52,18 @@ export default function AdminFranchisesPage() {
     addFranchise({ code: nextTh, name, ownerName, phone, password });
     setName(""); setOwnerName(""); setPhone(""); setPassword(""); setOpen(false);
   };
+
+  // แก้ไข / ลบ แฟรนไชส์
+  const [editFr, setEditFr] = useState<FranchiseWithStats | null>(null);
+  const [ef, setEf] = useState({ name: "", ownerName: "", phone: "", password: "" });
+  const openEdit = (f: FranchiseWithStats) => { setEf({ name: f.name, ownerName: f.ownerName ?? "", phone: f.phone ?? "", password: "" }); setEditFr(f); };
+  const saveEdit = () => {
+    if (!editFr) return;
+    editFranchise(editFr.id, { name: ef.name, ownerName: ef.ownerName, phone: ef.phone, password: ef.password || undefined });
+    setEditFr(null);
+  };
+  const [delFr, setDelFr] = useState<FranchiseWithStats | null>(null);
+  const doDelete = () => { if (delFr) { removeFranchise(delFr.id); setDelFr(null); } };
 
   // เพิ่มตู้ (บริษัทเท่านั้น — ผูกกับสัญญาเช่าซื้อ)
   const [cabFor, setCabFor] = useState<FranchiseWithStats | null>(null);
@@ -149,6 +161,8 @@ export default function AdminFranchisesPage() {
                 <p className="truncate font-bold text-neutral-800">{f.name}</p>
                 <p className="text-xs text-neutral-400">สร้าง {thaiDate(f.createdAt)}</p>
               </div>
+              <button onClick={() => openEdit(f)} title="แก้ไข" className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600"><Pencil className="h-4 w-4" /></button>
+              <button onClick={() => setDelFr(f)} title="ลบ" className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
             </div>
             <div className="space-y-1 text-xs text-neutral-500">
               <p className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> {f.ownerName || "-"}</p>
@@ -228,6 +242,59 @@ export default function AdminFranchisesPage() {
           </div>
           <p className="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">สร้างบัญชีเข้าระบบให้เจ้าของแฟรนไชส์ด้วย — เข้าที่ <span className="font-mono">/login/franchise</span> ด้วยเบอร์ + รหัสผ่านนี้</p>
           <p className="text-xs text-neutral-400">รหัสตู้ของแฟรนไชส์กำหนดอัตโนมัติเป็น <span className="font-mono">TK-01, TK-02, …</span> (บริษัทเป็นผู้เพิ่มตู้ตามสัญญาเช่าซื้อ)</p>
+        </div>
+      </Modal>
+
+      {/* แก้ไขแฟรนไชส์ */}
+      <Modal
+        open={!!editFr}
+        onClose={() => setEditFr(null)}
+        title={editFr ? `แก้ไขแฟรนไชส์ ${editFr.code}` : "แก้ไขแฟรนไชส์"}
+        footer={
+          <>
+            <button className="btn-outline flex-1" onClick={() => setEditFr(null)}>ยกเลิก</button>
+            <button className="btn-primary flex-1" disabled={!ef.name.trim() || !/^0\d{8,9}$/.test(ef.phone)} onClick={saveEdit}>บันทึก</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="label">ชื่อแฟรนไชส์</label>
+            <input className="input" value={ef.name} onChange={(e) => setEf({ ...ef, name: e.target.value })} placeholder="เช่น ธุรกิจในเครือครอบครัว" />
+          </div>
+          <div>
+            <label className="label">ชื่อเจ้าของ</label>
+            <input className="input" value={ef.ownerName} onChange={(e) => setEf({ ...ef, ownerName: e.target.value })} placeholder="คุณ…" />
+          </div>
+          <div>
+            <label className="label">เบอร์โทร (ใช้เข้าระบบ)</label>
+            <input className="input" inputMode="numeric" maxLength={10} value={ef.phone} onChange={(e) => setEf({ ...ef, phone: e.target.value.replace(/\D/g, "") })} placeholder="08x-xxx-xxxx" />
+          </div>
+          <div>
+            <label className="label">รหัสผ่านใหม่ <span className="text-neutral-400">(เว้นว่าง = ไม่เปลี่ยน)</span></label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <input className="input pl-9" type="text" value={ef.password} onChange={(e) => setEf({ ...ef, password: e.target.value })} placeholder="ตั้งรหัสผ่านใหม่ให้เจ้าของ (≥4 ตัว)" />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ยืนยันลบแฟรนไชส์ */}
+      <Modal
+        open={!!delFr}
+        onClose={() => setDelFr(null)}
+        title="ลบแฟรนไชส์"
+        footer={
+          <>
+            <button className="btn-outline flex-1" onClick={() => setDelFr(null)}>ยกเลิก</button>
+            <button className="btn flex-1 bg-red-500 text-white hover:bg-red-600" onClick={doDelete}><Trash2 className="h-4 w-4" /> ลบถาวร</button>
+          </>
+        }
+      >
+        <div className="flex items-start gap-2.5 text-sm text-neutral-600">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+          <p>ลบแฟรนไชส์ <b className="text-neutral-800">{delFr?.name} ({delFr?.code})</b> — จะลบ <b>ตู้ทั้งหมด ({delFr?.cabinetCount} ตู้)</b> และ <b>บัญชีเข้าระบบของเจ้าของ</b> ด้วย · <span className="text-red-500">ย้อนกลับไม่ได้</span></p>
         </div>
       </Modal>
 

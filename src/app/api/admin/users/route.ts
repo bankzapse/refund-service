@@ -46,6 +46,44 @@ export async function POST(req: Request) {
         await table("profiles").update({ role: "franchise", name: owner, franchise_id: fr.id }).eq("id", created.user.id);
         return NextResponse.json({ ok: true, id: fr.id });
       }
+      case "updateFranchise": {
+        const { franchiseId, name, ownerName, phone, password } = body;
+        if (!franchiseId) return bad("missing franchiseId");
+        if (phone != null && phone !== "" && !/^0\d{8,9}$/.test(String(phone).trim())) return bad("เบอร์ไม่ถูกต้อง (10 หลัก)");
+        if (password != null && password !== "" && String(password).length < 4) return bad("รหัสผ่านอย่างน้อย 4 ตัวอักษร");
+        // 1) แก้ข้อมูลแฟรนไชส์
+        const frPatch: Record<string, unknown> = {};
+        if (name != null) frPatch.name = String(name).trim();
+        if (ownerName != null) frPatch.owner_name = String(ownerName).trim();
+        if (phone != null && phone !== "") frPatch.phone = String(phone).trim();
+        if (Object.keys(frPatch).length) await table("franchises").update(frPatch).eq("id", franchiseId);
+        // 2) แก้บัญชีเข้าระบบของเจ้าของแฟรนไชส์ (role=franchise ที่ผูกกับแฟรนไชส์นี้)
+        const { data: owners } = await table("profiles").select("id").eq("franchise_id", franchiseId).eq("role", "franchise");
+        const ownerId = (owners as { id: string }[] | null)?.[0]?.id;
+        if (ownerId) {
+          const authPatch: Record<string, unknown> = {};
+          if (phone != null && phone !== "") authPatch.phone = toE164(phone);
+          if (password) authPatch.password = String(password);
+          if (Object.keys(authPatch).length) await admin.auth.admin.updateUserById(ownerId, authPatch);
+          const profPatch: Record<string, unknown> = {};
+          if (ownerName != null) profPatch.name = String(ownerName).trim();
+          if (phone != null && phone !== "") profPatch.phone = String(phone).trim();
+          if (Object.keys(profPatch).length) await table("profiles").update(profPatch).eq("id", ownerId);
+        }
+        return NextResponse.json({ ok: true });
+      }
+      case "removeFranchise": {
+        const { franchiseId } = body;
+        if (!franchiseId) return bad("missing franchiseId");
+        // ลบบัญชีเจ้าของ (role=franchise ที่ผูกกับแฟรนไชส์นี้)
+        const { data: owners } = await table("profiles").select("id").eq("franchise_id", franchiseId).eq("role", "franchise");
+        for (const o of (owners as { id: string }[] | null) ?? []) { await admin.auth.admin.deleteUser(o.id).catch(() => {}); }
+        // ลบตู้ของแฟรนไชส์ + ตัวแฟรนไชส์
+        await table("cabinets").delete().eq("franchise_id", franchiseId);
+        const { error } = await table("franchises").delete().eq("id", franchiseId);
+        if (error) return bad(error.message, 500);
+        return NextResponse.json({ ok: true });
+      }
       case "createCenter": {
         const { name, phone, password, address, province, district, subdistrict } = body;
         if (!name?.trim() || !/^0\d{8,9}$/.test(String(phone || "").trim()) || String(password || "").length < 4) return bad("ข้อมูลไม่ครบ");
