@@ -24,6 +24,7 @@ export async function GET() {
     mode,
     rev: (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7), // commit ที่ deploy อยู่
     canSellerOtp,
+    smsSender: process.env.SMSOK_SENDER || "Chao-Dee", // ชื่อผู้ส่ง SMS ที่ใช้จริง (ไม่ใช่ secret)
     config: { supabase, serviceRole, smsok, smsHook, otpSecret },
     hint: canSellerOtp
       ? "พร้อมส่ง OTP ให้ผู้ขาย"
