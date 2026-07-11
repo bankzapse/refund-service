@@ -2,6 +2,7 @@ import type { User } from "./types";
 
 /** เมนูฝั่งบริษัทที่กำหนดสิทธิ์เข้าถึงได้ (owner เข้าได้ทุกเมนูเสมอ) */
 export const ADMIN_MENUS: { key: string; label: string }[] = [
+  { key: "summary", label: "สรุปการเงิน" },
   { key: "dropgo", label: "Drop Bag (ภาพรวม)" },
   { key: "franchises", label: "แฟรนไชส์" },
   { key: "centers", label: "ศูนย์คัดแยก" },

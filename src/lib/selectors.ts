@@ -4,7 +4,7 @@ import { currentMonth } from "./utils";
 import { distanceKm } from "./geo";
 import { MATERIAL_MAP } from "./materials";
 import { PLATFORM_RATE } from "./fees";
-import { revenueShare, type RevenueShare } from "./revenue";
+import { revenueShare, CONTRACT_PER_CABINET, type RevenueShare } from "./revenue";
 
 const todayYMD = () => {
   const d = new Date();
@@ -106,6 +106,34 @@ export function factoryProfitSummary(db: DB, since?: Date): FactoryProfitSummary
     saleCount: sales.length,
     totalKg,
     byMaterial: [...byMat.values()].sort((a, b) => b.profit - a.profit),
+  };
+}
+
+/** สรุปการเงินรวมของบริษัท (รายได้ / กำไร / ลงทุน) ตามช่วงเวลา */
+export interface FinancialSummary {
+  factoryRevenue: number; // รายได้จากขายโรงงาน
+  factoryProfit: number; // กำไรจากขายโรงงาน
+  cabinetInvest: number; // เงินลงทุนตู้ (จำนวนตู้ × ค่าสัญญา)
+  cabinetCount: number;
+  purchaseCost: number; // มูลค่ารับซื้อ (จ่ายผู้ขายเป็นคะแนน)
+  franchisePaid: number; // โอนส่วนแบ่งให้แฟรนไชส์
+  redeemPaid: number; // จ่ายเงินแลกให้ผู้ขาย (เงินสดออก)
+  saleCount: number;
+}
+export function financialSummary(db: DB, since?: Date): FinancialSummary {
+  const c = since?.toISOString();
+  const after = (iso?: string) => !c || (!!iso && iso >= c);
+  const fsales = (db.factorySales ?? []).filter((s) => after(s.soldAt));
+  const cabs = (db.cabinets ?? []).filter((cb) => after(cb.createdAt));
+  return {
+    factoryRevenue: fsales.reduce((s, x) => s + x.revenue, 0),
+    factoryProfit: fsales.reduce((s, x) => s + x.profit, 0),
+    cabinetInvest: cabs.length * CONTRACT_PER_CABINET,
+    cabinetCount: cabs.length,
+    purchaseCost: (db.bags ?? []).filter((b) => b.status === "credited" && after(b.creditedAt)).reduce((s, b) => s + (b.valueBaht ?? 0), 0),
+    franchisePaid: (db.franchisePayouts ?? []).filter((p) => after(p.paidAt)).reduce((s, p) => s + p.amount, 0),
+    redeemPaid: (db.redemptions ?? []).filter((r) => r.status === "paid" && after(r.paidAt)).reduce((s, r) => s + r.amountBaht, 0),
+    saleCount: fsales.length,
   };
 }
 
