@@ -174,6 +174,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const endPending = useCallback(() => setPending((n) => Math.max(0, n - 1)), []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sbRef = useRef<any>(null);
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // โหลดข้อมูลใหม่แบบ debounce — รวมทริกเกอร์หลายครั้ง (mutation + realtime) ให้เหลือ loadAll ครั้งเดียว
+  const scheduleReload = useCallback((delay = 400) => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(async () => {
+      reloadTimerRef.current = null;
+      if (!sbRef.current) return;
+      try {
+        const d = await withTimeout(repo.loadAll(sbRef.current), 20000, "โหลดข้อมูลช้า");
+        setDb(d);
+      } catch {
+        /* ช้า/ล้มเหลว — คงข้อมูลเดิม */
+      }
+    }, delay);
+  }, []);
 
   // Load from localStorage on mount (demo data layer)
   useEffect(() => {
@@ -225,11 +241,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const channel = supabase
       .channel("rf-changes")
       .on("postgres_changes", { event: "*", schema: "public" }, () => {
-        repo.loadAll(supabase).then((d) => active && setDb(d)).catch(() => {});
+        if (active) scheduleReload(); // debounce — เปลี่ยนหลายตารางรวดเดียว → loadAll ครั้งเดียว
       })
       .subscribe();
     return () => {
       active = false;
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       authSub.subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
@@ -261,7 +278,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     if (!sbRef.current) return;
     try {
-      setDb(await repo.loadAll(sbRef.current));
+      setDb(await withTimeout(repo.loadAll(sbRef.current), 20000, "โหลดข้อมูลช้า"));
     } catch {
       /* ignore */
     }
@@ -273,8 +290,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!sb) { pushToast("ระบบยังไม่พร้อม ลองใหม่อีกครั้ง", "info"); return Promise.resolve(false); }
       startPending();
       return fn(sb)
-        .then(async () => {
-          await refresh();
+        .then(() => {
+          scheduleReload(); // โหลดใหม่แบบ debounce (รวมกับ realtime ของ write เดียวกัน) — โชว์ toast ทันที ไม่รอโหลด
           if (msg) pushToast(msg, kind ?? "success");
           return true;
         })
@@ -284,7 +301,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         })
         .finally(endPending);
     },
-    [refresh, pushToast, startPending, endPending],
+    [scheduleReload, pushToast, startPending, endPending],
   );
 
   // จัดการบัญชีศูนย์คัดแยก/ผู้ดูแล ผ่าน service-role API (โหมด Supabase)
