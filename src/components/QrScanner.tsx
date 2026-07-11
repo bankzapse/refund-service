@@ -3,26 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Loader2, CameraOff, CheckCircle2 } from "lucide-react";
 
-// @zxing โหลดแบบ dynamic (client-only) — กันไม่ให้เข้าไปอยู่ใน bundle ตอน build/prerender
-type ScannerControls = { stop: () => void };
-
 /**
- * สแกน QR ด้วยกล้องจริงบนเว็บ/มือถือ (getUserMedia + @zxing/browser)
- * - เปิดกล้องหลัง (environment) เต็มจอ, สแกนต่อเนื่อง
+ * สแกน QR ด้วยกล้องจริงบนเว็บ/มือถือ (getUserMedia + jsQR — pure JS ไม่มี native dep)
+ * - เปิดกล้องหลัง (environment) เต็มจอ, ถอดรหัสจากเฟรมวิดีโอผ่าน canvas
  * - ยิง onResult ทุกครั้งที่เจอรหัสใหม่ (กันรหัสเดิมซ้ำภายใน 2 วินาที) → หย่อนหลายถุงรวดเดียว
  * - ไม่มีกล้อง/ไม่ได้สิทธิ์ → โชว์ข้อความให้พิมพ์รหัสเอง
  * ต้องรันบน HTTPS (หรือ localhost) — โปรดักชัน Vercel เป็น HTTPS อยู่แล้ว
  */
 export function QrScanner({ open, onClose, onResult }: { open: boolean; onClose: () => void; onResult: (text: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<ScannerControls | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
   const lastRef = useRef<{ text: string; t: number }>({ text: "", t: 0 });
+  const lastScanRef = useRef(0); // throttle การถอดรหัส
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
 
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(true);
-  const [flash, setFlash] = useState(false); // เด้ง ✓ ตอนสแกนติด
+  const [flash, setFlash] = useState(false);
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -33,29 +32,52 @@ export function QrScanner({ open, onClose, onResult }: { open: boolean; onClose:
     setCount(0);
     lastRef.current = { text: "", t: 0 };
 
+    const stopCamera = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+
     (async () => {
       try {
-        const { BrowserQRCodeReader } = await import("@zxing/browser");
-        const reader = new BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
-        const controls = await reader.decodeFromConstraints(
-          { video: { facingMode: { ideal: "environment" } } },
-          videoRef.current!,
-          (result) => {
-            if (!result) return;
-            const text = result.getText().trim();
-            const now = Date.now();
-            // กันรหัสเดิมยิงรัวๆ ระหว่างที่ QR ยังอยู่ในกล้อง
-            if (text === lastRef.current.text && now - lastRef.current.t < 2000) return;
-            lastRef.current = { text, t: now };
-            setCount((c) => c + 1);
-            setFlash(true);
-            setTimeout(() => setFlash(false), 350);
-            onResultRef.current(text);
-          },
-        );
-        if (cancelled) { controls.stop(); return; }
-        controlsRef.current = controls;
+        const jsQR = (await import("jsqr")).default;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        const video = videoRef.current!;
+        video.srcObject = stream;
+        await video.play();
         setStarting(false);
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+
+        const tick = () => {
+          if (cancelled) return;
+          const now = Date.now();
+          if (video.readyState >= 2 && video.videoWidth && now - lastScanRef.current >= 120) {
+            lastScanRef.current = now;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+            if (code && code.data) {
+              const text = code.data.trim();
+              // กันรหัสเดิมยิงรัวๆ ระหว่างที่ QR ยังอยู่ในกล้อง
+              if (!(text === lastRef.current.text && now - lastRef.current.t < 2000)) {
+                lastRef.current = { text, t: now };
+                setCount((c) => c + 1);
+                setFlash(true);
+                setTimeout(() => setFlash(false), 350);
+                onResultRef.current(text);
+              }
+            }
+          }
+          rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
       } catch (e) {
         if (cancelled) return;
         setStarting(false);
@@ -70,11 +92,7 @@ export function QrScanner({ open, onClose, onResult }: { open: boolean; onClose:
       }
     })();
 
-    return () => {
-      cancelled = true;
-      controlsRef.current?.stop();
-      controlsRef.current = null;
-    };
+    return () => { cancelled = true; stopCamera(); };
   }, [open]);
 
   if (!open) return null;
