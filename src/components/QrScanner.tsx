@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BrowserQRCodeReader } from "@zxing/browser";
-import type { IScannerControls } from "@zxing/browser";
 import { X, Loader2, CameraOff, CheckCircle2 } from "lucide-react";
+
+// @zxing โหลดแบบ dynamic (client-only) — กันไม่ให้เข้าไปอยู่ใน bundle ตอน build/prerender
+type ScannerControls = { stop: () => void };
 
 /**
  * สแกน QR ด้วยกล้องจริงบนเว็บ/มือถือ (getUserMedia + @zxing/browser)
@@ -14,7 +15,7 @@ import { X, Loader2, CameraOff, CheckCircle2 } from "lucide-react";
  */
 export function QrScanner({ open, onClose, onResult }: { open: boolean; onClose: () => void; onResult: (text: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
+  const controlsRef = useRef<ScannerControls | null>(null);
   const lastRef = useRef<{ text: string; t: number }>({ text: "", t: 0 });
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
@@ -31,10 +32,11 @@ export function QrScanner({ open, onClose, onResult }: { open: boolean; onClose:
     setStarting(true);
     setCount(0);
     lastRef.current = { text: "", t: 0 };
-    const reader = new BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
 
     (async () => {
       try {
+        const { BrowserQRCodeReader } = await import("@zxing/browser");
+        const reader = new BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
         const controls = await reader.decodeFromConstraints(
           { video: { facingMode: { ideal: "environment" } } },
           videoRef.current!,
