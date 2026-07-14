@@ -21,11 +21,10 @@ export async function POST(req: Request) {
   }
 
   const body = JSON.parse(raw || "{}");
-  for (const ev of body.events ?? []) {
-    // eslint-disable-next-line no-console
-    console.log("[LINE webhook]", ev.type, ev.source?.userId);
+  for (const _ev of body.events ?? []) {
     // TODO(production): ev.type === "follow" → บันทึกว่าเป็นเพื่อน OA
     //                   ev.type === "message" & account-link → ผูก userId เข้ากับ profile
+    void _ev; // ไม่ log userId (PII) ลง serverless logs
   }
   return NextResponse.json({ ok: true });
 }

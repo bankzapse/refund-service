@@ -49,6 +49,16 @@ function estTotal(items: { pricePerUnit: number; qty: number }[]) {
 }
 
 /** สร้างฐานข้อมูลตั้งต้น (dates สัมพันธ์กับวันนี้ เพื่อให้เดโมสมจริง) */
+/** DB ว่างเปล่า — ใช้เป็นค่าตั้งต้นในโหมด Supabase (กัน seed ปลอมโผล่ตอนโหลดจริงยังไม่เสร็จ/ล้มเหลว) */
+export function emptyDB(): DB {
+  return {
+    users: [], jobs: [], slots: [], tickets: [], draws: [], bills: [], expenses: [], wallet: [],
+    franchises: [], cabinets: [], bags: [], pointTxns: [], redemptions: [], franchisePayouts: [],
+    buyerPrices: {}, centralPrices: {}, factoryPrices: {}, factorySales: [],
+    pricesUpdatedAt: new Date(0).toISOString(),
+  };
+}
+
 export function createInitialDB(): DB {
   const now = new Date();
   const month = currentMonth();

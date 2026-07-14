@@ -6,7 +6,10 @@
  */
 import crypto from "crypto";
 
-const SECRET = process.env.OTP_SECRET || process.env.SMSOK_API_SECRET || "dev-otp-secret-change-me";
+const RAW_SECRET = process.env.OTP_SECRET || process.env.SMSOK_API_SECRET;
+const SECRET = RAW_SECRET || "dev-otp-secret-change-me";
+// 🔒 fail-closed: ห้ามใช้ secret ค่าเริ่มต้นใน production (ไม่งั้น token ปลอมได้)
+const INSECURE = !RAW_SECRET && process.env.NODE_ENV === "production";
 const TTL_MS = 5 * 60 * 1000; // 5 นาที
 
 const b64url = (s: string) => Buffer.from(s).toString("base64url");
@@ -23,6 +26,7 @@ export function issueOtp(phone: string): { code: string; token: string; ttlMs: n
 
 /** ตรวจโค้ดกับโทเคน */
 export function verifyOtp(phone: string, code: string, token: string): { ok: boolean; error?: string } {
+  if (INSECURE) return { ok: false, error: "otp not configured" }; // fail-closed
   if (!token || !code) return { ok: false, error: "missing" };
   const parts = token.split(".");
   if (parts.length !== 2) return { ok: false, error: "bad token" };

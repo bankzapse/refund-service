@@ -568,6 +568,7 @@ begin
   return v_points;
 end $$;
 
+create sequence if not exists redemption_code_seq; -- รหัส redemption ไม่ชนกัน
 create or replace function redeem_points(p_amount numeric, p_points numeric, p_method text, p_account text)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := auth.uid(); v_bal numeric; v_rid uuid; v_code text; v_amount numeric;
@@ -579,7 +580,7 @@ begin
   select points into v_bal from profiles where id = v_uid for update;
   if v_bal < p_points then raise exception 'not enough points'; end if;
   update profiles set points = points - p_points where id = v_uid returning points into v_bal;
-  v_code := 'R-' || lpad((floor(random() * 9000) + 1000)::int::text, 4, '0');
+  v_code := 'R' || lpad(nextval('redemption_code_seq')::text, 6, '0'); -- 🔒 unique (เดิมสุ่ม 4 หลักชนได้)
   insert into redemptions(code, user_id, amount_baht, points, method, account, status)
     values (v_code, v_uid, v_amount, p_points, coalesce(p_method, 'promptpay'), p_account, 'pending') returning id into v_rid;
   insert into point_transactions(user_id, type, points, balance_after, note, redemption_id)

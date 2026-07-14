@@ -45,7 +45,8 @@ export async function POST(req: Request) {
         if (eF || !fr) return bad(/duplicate|unique/i.test(eF?.message ?? "") ? "อักษรย่อแฟรนไชส์นี้มีแล้ว" : (eF?.message ?? "สร้างแฟรนไชส์ไม่สำเร็จ"));
         const { data: created, error } = await admin.auth.admin.createUser({ phone: toE164(phone), password, phone_confirm: true, user_metadata: { name: owner, role: "franchise" } });
         if (error || !created?.user) { await table("franchises").delete().eq("id", fr.id); return bad(error?.message ?? "สร้างบัญชีเจ้าของไม่สำเร็จ"); }
-        await table("profiles").update({ role: "franchise", name: owner, franchise_id: fr.id }).eq("id", created.user.id);
+        const { error: eP } = await table("profiles").update({ role: "franchise", name: owner, franchise_id: fr.id }).eq("id", created.user.id);
+        if (eP) { await admin.auth.admin.deleteUser(created.user.id).catch(() => {}); await table("franchises").delete().eq("id", fr.id); return bad("ตั้งค่าบัญชีเจ้าของไม่สำเร็จ"); }
         return NextResponse.json({ ok: true, id: fr.id });
       }
       case "updateFranchise": {
@@ -101,7 +102,8 @@ export async function POST(req: Request) {
         if (!name?.trim() || !/^0\d{8,9}$/.test(String(phone || "").trim()) || String(password || "").length < 4) return bad("ข้อมูลไม่ครบ");
         const { data: created, error } = await admin.auth.admin.createUser({ phone: toE164(phone), password, phone_confirm: true, user_metadata: { name: name.trim(), role: "buyer" } });
         if (error || !created?.user) return bad(error?.message ?? "สร้างบัญชีไม่สำเร็จ");
-        await table("profiles").update({ role: "buyer", name: name.trim(), partner: true, address: address ?? null, province: province ?? null, district: district ?? null, subdistrict: subdistrict ?? null }).eq("id", created.user.id);
+        const { error: ePc } = await table("profiles").update({ role: "buyer", name: name.trim(), partner: true, address: address ?? null, province: province ?? null, district: district ?? null, subdistrict: subdistrict ?? null }).eq("id", created.user.id);
+        if (ePc) { await admin.auth.admin.deleteUser(created.user.id).catch(() => {}); return bad("ตั้งค่าบัญชีศูนย์คัดแยกไม่สำเร็จ"); }
         return NextResponse.json({ ok: true, id: created.user.id });
       }
       case "updateCenter": {
@@ -162,7 +164,8 @@ export async function POST(req: Request) {
         if (!name?.trim() || !/^0\d{8,9}$/.test(String(phone || "").trim()) || String(password || "").length < 4) return bad("ข้อมูลไม่ครบ");
         const { data: created, error } = await admin.auth.admin.createUser({ phone: toE164(phone), password, phone_confirm: true, user_metadata: { name: name.trim(), role: "admin" } });
         if (error || !created?.user) return bad(error?.message ?? "สร้างบัญชีไม่สำเร็จ");
-        await table("profiles").update({ role: "admin", name: name.trim(), owner: false, permissions: Array.isArray(permissions) ? permissions : [] }).eq("id", created.user.id);
+        const { error: ePa } = await table("profiles").update({ role: "admin", name: name.trim(), owner: false, permissions: Array.isArray(permissions) ? permissions : [] }).eq("id", created.user.id);
+        if (ePa) { await admin.auth.admin.deleteUser(created.user.id).catch(() => {}); return bad("ตั้งค่าบัญชีผู้ดูแลไม่สำเร็จ"); }
         return NextResponse.json({ ok: true, id: created.user.id });
       }
       case "setAdminPermissions": {

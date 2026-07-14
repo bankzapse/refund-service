@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { AppHeader } from "@/components/AppHeader";
@@ -33,6 +33,7 @@ export default function DropPage() {
   };
 
   const [scanOpen, setScanOpen] = useState(false);
+  const closeScan = useCallback(() => setScanOpen(false), []); // memoize กันกล้อง restart ทุก re-render
   const scan = async () => {
     // แอป native → กล้อง MLKit; ในไลน์ → liff.scanCodeV2
     if (isNativeApp()) {
@@ -153,7 +154,7 @@ export default function DropPage() {
         </button>
       </div>
 
-      <QrScanner open={scanOpen} onClose={() => setScanOpen(false)} onResult={handleCode} />
+      <QrScanner open={scanOpen} onClose={closeScan} onResult={handleCode} />
     </div>
   );
 }

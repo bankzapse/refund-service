@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Bill, BillItem, Expense, Job, JobStatus, Role, ScheduleSlot, User, WalletTxn, MeshBag, BagItem, PointTxn, Redemption, Cabinet, Franchise, PayoutAccount, FranchisePayout, FactorySale, FactorySaleItem } from "./types";
 import { POINTS_PER_BAHT, bagQr } from "./types";
-import { createInitialDB, type DB } from "./seed";
+import { createInitialDB, emptyDB, type DB } from "./seed";
 import { billCode, jobCode, ticketNumber, todayISO, uid, currentMonth } from "./utils";
 import { computeSettlement, MAX_TICKETS_PER_MONTH, MIN_CREDIT } from "./fees";
 import { supabaseConfigured } from "./supabase/config";
@@ -172,7 +172,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [storageReady, setStorageReady] = useState(false);
   const [sessionReady, setSessionReady] = useState(!supabaseConfigured);
   const ready = storageReady && sessionReady;
-  const [db, setDb] = useState<DB>(() => createInitialDB());
+  // Supabase: เริ่มด้วย DB ว่าง (กัน seed ปลอมโผล่ถ้าโหลดจริงล้มเหลว) · เดโม: ใช้ seed
+  const [db, setDb] = useState<DB>(() => (supabaseConfigured ? emptyDB() : createInitialDB()));
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [sbUser, setSbUser] = useState<User | null>(null); // production: จาก Supabase session
   // บทบาทที่ใช้งาน เก็บฝั่ง browser (แต่ละเครื่องแยกกัน) → 1 บัญชีเปิดหลายบทบาทพร้อมกันได้
@@ -1012,7 +1013,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         userId: currentUser.id, userName: currentUser.name, status: "dropped", droppedAt: now,
       }));
       setDb((d) => ({ ...d, bags: [...newBags, ...d.bags] }));
-      pushToast(`หย่อน ${clean.length} ถุงที่ตู้ ${cab.name} · แจ้ง LINE เมื่อได้คะแนน`, "line");
+      pushToast(`หย่อน ${clean.length} ถุงที่ตู้ ${cab.name} · รอทีมงานคัดแยกให้คะแนน`, "success");
       return true;
     },
     [currentUser, db.cabinets, pushToast, sbWrite],
@@ -1041,7 +1042,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       });
       if (!found) { pushToast("ไม่พบถุงนี้ในระบบ", "info"); return false; }
-      pushToast("ตีราคา + ให้คะแนนแล้ว · แจ้ง LINE คนทิ้ง", "line");
+      pushToast("ตีราคา + ให้คะแนนแล้ว", "success");
       return true;
     },
     [pushToast, sbWrite],
