@@ -720,6 +720,9 @@ create table if not exists otp_throttle (
   phone        text primary key,
   fails        int not null default 0,
   locked_until timestamptz,
+  last_send    timestamptz,     -- ส่ง OTP ครั้งล่าสุด (คุม cooldown)
+  sends_day    date,            -- วันของ sends_count (รีเซ็ตต่อวัน)
+  sends_count  int not null default 0, -- จำนวนส่งวันนี้ (คุมโควตา/วัน)
   updated_at   timestamptz not null default now()
 );
 alter table otp_throttle enable row level security;

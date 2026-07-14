@@ -43,16 +43,7 @@ function RegisterForm() {
     if (password !== confirm) return setErr("รหัสผ่านยืนยันไม่ตรงกัน");
     setBusy(true);
     try {
-      if (supabaseConfigured) {
-        // Supabase สร้าง user — ถ้าเปิด "ยืนยันเบอร์" จะส่ง OTP (ไม่มี session) → ไปหน้า OTP
-        // ถ้าปิด (autoconfirm) จะได้ session ทันที → สมัครเสร็จ เข้าระบบเลย (redirect ไป /home)
-        const { data, error } = await createClient().auth.signUp({ phone: toE164(phone), password, options: { data: { name: name.trim(), role: "seller" } } });
-        if (error) return setErr(friendlyError(error));
-        if (data.session) return; // สมัครสำเร็จ + เข้าระบบแล้ว → effect พาไป /home (ไม่ต้องยืนยัน OTP)
-        setSmsMode(true);
-        return setStep(2); // ต้องยืนยัน OTP
-      }
-      // โหมดเดโม: ส่ง OTP ผ่าน SMS OK (ไม่ตั้งค่า = โหมดทดลอง)
+      // ส่ง OTP ผ่านระบบของแอปเอง (SMS OK) — ทั้งโหมด Supabase และเดโม (ไม่พึ่ง Send SMS Hook ที่อาจ 404)
       const r = await fetch("/api/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
       const j = await r.json().catch(() => ({ ok: false }));
       if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "ส่งรหัส OTP ไม่สำเร็จ"));
@@ -73,8 +64,12 @@ function RegisterForm() {
     setBusy(true);
     try {
       if (supabaseConfigured) {
-        const { error } = await createClient().auth.verifyOtp({ phone: toE164(phone), token: otp.trim(), type: "sms" });
-        if (error) return setErr(friendlyError(error));
+        // สร้างบัญชีผ่าน service-role (ยืนยัน OTP ฝั่ง server) → แล้วเข้าสู่ระบบเพื่อรับ session
+        const r = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email || undefined, password, code: otp.trim(), token: otpToken }) });
+        const j = await r.json().catch(() => ({ ok: false }));
+        if (!r.ok || j.ok === false) return setErr(friendlyError(j.error, "สมัครไม่สำเร็จ"));
+        const { error } = await createClient().auth.signInWithPassword({ phone: toE164(phone), password });
+        if (error) return setErr(friendlyError(error, "สมัครสำเร็จ — กรุณาเข้าสู่ระบบ"));
         return; // session → redirect effect
       }
       if (smsMode) {
