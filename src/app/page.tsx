@@ -217,7 +217,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-neutral-500">
-            © {new Date().getFullYear()} ถุงเขียว (Thung Khiao) · ดำเนินการโดย บริษัท [ชื่อบริษัท] จำกัด
+            © {new Date().getFullYear()} ถุงเขียว (Thung Khiao) · ดำเนินการโดย ห้างหุ้นส่วนจำกัด พุงกลม แคทเทอริ่ง
           </div>
         </div>
       </footer>

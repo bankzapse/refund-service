@@ -10,7 +10,7 @@ export default function PrivacyPage() {
   return (
     <LegalShell title="นโยบายความเป็นส่วนตัว" subtitle="Privacy Policy — ถุงเขียว (Thung Khiao)" updated="8 กรกฎาคม 2569 (2026)">
       <p>
-        ถุงเขียว (“เรา”, “แอป”) ดำเนินการโดย บริษัท [ชื่อบริษัท] จำกัด ให้ความสำคัญกับความเป็นส่วนตัวของผู้ใช้
+        ถุงเขียว (“เรา”, “แอป”) ดำเนินการโดย ห้างหุ้นส่วนจำกัด พุงกลม แคทเทอริ่ง (PHOONGKLOM CATERING LIMITED PARTNERSHIP) ให้ความสำคัญกับความเป็นส่วนตัวของผู้ใช้
         นโยบายนี้อธิบายว่าเราเก็บ ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของคุณอย่างไร
         ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
       </p>
@@ -98,8 +98,11 @@ export default function PrivacyPage() {
       </Sec>
 
       <Sec n={9} title="ติดต่อเรา">
-        <p>บริษัท [ชื่อบริษัท] จำกัด · [ที่อยู่บริษัท]</p>
-        <p>อีเมล: <a href="mailto:support@thungkhiao.co" className="text-brand-600">support@thungkhiao.co</a> · LINE: @thungkhiao</p>
+        <p><b>ผู้ควบคุมข้อมูลส่วนบุคคล:</b> ห้างหุ้นส่วนจำกัด พุงกลม แคทเทอริ่ง (PHOONGKLOM CATERING LIMITED PARTNERSHIP)</p>
+        <p>เลขทะเบียนนิติบุคคล: 0503567002941</p>
+        <p>สำนักงานใหญ่: 359/112 โครงการสุขสมฤทัย หมู่ที่ 4 ตำบลยางเนิ้ง อำเภอสารภี จังหวัดเชียงใหม่ 50140</p>
+        <p>โทร: <a href="tel:0892616445" className="text-brand-600">089-261-6445</a> · อีเมล: <a href="mailto:support@thungkhiao.co" className="text-brand-600">support@thungkhiao.co</a> · LINE: @thungkhiao</p>
+        <p className="text-neutral-400">ช่องทางข้างต้นใช้สำหรับใช้สิทธิตาม PDPA และสอบถามเรื่องข้อมูลส่วนบุคคล</p>
       </Sec>
     </LegalShell>
   );

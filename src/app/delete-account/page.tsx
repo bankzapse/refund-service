@@ -48,7 +48,7 @@ export default function DeleteAccountPage() {
       </Sec>
 
       <Sec n={6} title="ติดต่อ">
-        <p>บริษัท [ชื่อบริษัท] จำกัด · อีเมล: <a href="mailto:support@thungkhiao.co" className="text-brand-600">support@thungkhiao.co</a> · LINE: @thungkhiao</p>
+        <p>ห้างหุ้นส่วนจำกัด พุงกลม แคทเทอริ่ง · โทร: <a href="tel:0892616445" className="text-brand-600">089-261-6445</a> · อีเมล: <a href="mailto:support@thungkhiao.co" className="text-brand-600">support@thungkhiao.co</a> · LINE: @thungkhiao</p>
       </Sec>
     </LegalShell>
   );
