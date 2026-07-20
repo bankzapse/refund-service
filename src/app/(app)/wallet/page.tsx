@@ -8,6 +8,7 @@ import { creditOf, walletForBuyer, todayCommission } from "@/lib/selectors";
 import {
   MIN_CREDIT,
   COMPANY_PROMPTPAY,
+  promptPayConfigured,
   COMPANY_NAME,
   TOPUP_PRESETS,
   feeRateLabel,
@@ -127,7 +128,17 @@ export default function WalletPage() {
             />
           </div>
 
-          {!showQR ? (
+          {/* 🔒 fail-closed: ไม่ได้ตั้ง NEXT_PUBLIC_COMPANY_PROMPTPAY = ซ่อน QR ไปเลย
+              ดีกว่าโชว์เลขตัวอย่างแล้วผู้ใช้โอนเงินจริงเข้าบัญชีคนอื่น */}
+          {!promptPayConfigured ? (
+            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">ยังเติมเครดิตด้วย PromptPay ไม่ได้</p>
+                <p className="mt-0.5 text-xs text-amber-700">ระบบยังไม่ได้ตั้งค่าบัญชีพร้อมเพย์ของบริษัท — กรุณาติดต่อผู้ดูแลระบบ</p>
+              </div>
+            </div>
+          ) : !showQR ? (
             <button className="btn-primary mt-3 w-full" disabled={amount <= 0} onClick={() => setShowQR(true)}>
               โอนผ่าน PromptPay ฿{formatBaht(amount)}
             </button>

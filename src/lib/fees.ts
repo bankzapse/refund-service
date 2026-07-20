@@ -8,8 +8,14 @@
 export const COMPANY_COMMISSION_RATE = 0.02; // ค่าคอมบริษัท (หักจากเครดิต)
 export const MIN_CREDIT = 300; // เครดิตขั้นต่ำเพื่อรับงาน
 
-/** พร้อมเพย์บริษัท (ปลายทางเติมเครดิต) — ตั้งค่าจริงผ่าน env ตอน production */
-export const COMPANY_PROMPTPAY = process.env.NEXT_PUBLIC_COMPANY_PROMPTPAY || "0812345678";
+/**
+ * พร้อมเพย์บริษัท (ปลายทางเติมเครดิต) — ต้องตั้งผ่าน env เท่านั้น
+ * 🔒 fail-closed: ไม่ตั้ง/รูปแบบผิด = ปิดช่องทางเติมเครดิต ห้าม fallback เป็นเลขตัวอย่าง
+ * เพราะ QR จะพาผู้ใช้โอน "เงินจริง" เข้าบัญชีคนอื่น (lib/promptpay.ts ไม่ validate ให้)
+ * รับได้: เบอร์มือถือ 10 หลัก (0xxxxxxxxx) หรือเลขบัตรประชาชน 13 หลัก
+ */
+export const COMPANY_PROMPTPAY = (process.env.NEXT_PUBLIC_COMPANY_PROMPTPAY ?? "").replace(/\D/g, "");
+export const promptPayConfigured = /^0\d{9}$/.test(COMPANY_PROMPTPAY) || /^\d{13}$/.test(COMPANY_PROMPTPAY);
 export const COMPANY_NAME = "Recycle Fund";
 export const TOPUP_PRESETS = [300, 500, 1000, 2000]; // จำนวนเติมด่วน
 

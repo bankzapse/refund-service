@@ -57,7 +57,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_LIFF_ID=            # เปิด QR scanner ในไลน์
 LINE_CHANNEL_ACCESS_TOKEN=     # แจ้งเตือน LINE
 LINE_CHANNEL_SECRET=
-NEXT_PUBLIC_COMPANY_PROMPTPAY=  # พร้อมเพย์บริษัท (รับเงิน/อ้างอิง)
+NEXT_PUBLIC_COMPANY_PROMPTPAY=  # [จำเป็น] พร้อมเพย์บริษัท — เบอร์ 10 หลัก หรือเลขบัตร ปชช. 13 หลัก
+                                # ไม่ตั้ง/ผิดรูปแบบ = หน้าเติมเครดิตซ่อน QR (fail-closed) · แก้แล้วต้อง Redeploy
 
 # SMS OK (OTP ยืนยันเบอร์โทร) — ต่อโค้ดเสร็จแล้ว
 SMSOK_API_KEY=                 # จาก https://developer.smsok.co

@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.example เป็น template ไม่มีค่า secret — ต้อง commit ไม่งั้นคนอื่นไม่รู้ว่าต้องตั้ง env อะไรบ้าง
+!.env.example
 
 # vercel
 .vercel
