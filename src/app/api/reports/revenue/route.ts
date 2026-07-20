@@ -25,6 +25,7 @@ export async function GET(req: Request) {
   }
 
   // ต้องเป็นแอดมินเท่านั้น
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any).from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "forbidden — admin only" }, { status: 403 });

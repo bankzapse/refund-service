@@ -24,6 +24,8 @@ export default function JobDetailPage() {
   const [showCancel, setShowCancel] = useState(false);
   const [amount, setAmount] = useState("");
   const [payMethod, setPayMethod] = useState<"cash" | "promptpay">("cash");
+  // ปิดงาน = ออกบิลอัตโนมัติ (เชื่อมไปยังระบบร้าน B + GMV แอดมิน C + สิทธิ์ผู้ขาย)
+  const [finishing, setFinishing] = useState(false);
 
   if (!job) {
     return (
@@ -46,8 +48,6 @@ export default function JobDetailPage() {
     setShowComplete(true);
   };
 
-  // ปิดงาน = ออกบิลอัตโนมัติ (เชื่อมไปยังระบบร้าน B + GMV แอดมิน C + สิทธิ์ผู้ขาย)
-  const [finishing, setFinishing] = useState(false);
   const finishWithBill = async () => {
     if (finishing) return;
     const amt = Number(amount) || 0;

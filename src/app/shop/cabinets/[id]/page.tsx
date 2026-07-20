@@ -20,6 +20,7 @@ export default function CabinetDetailPage() {
 
   const [valuing, setValuing] = useState<MeshBag | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
+  const [valuingBusy, setValuingBusy] = useState(false);
 
   if (!cab) {
     return (
@@ -43,7 +44,6 @@ export default function CabinetDetailPage() {
   const value = items.reduce((s, i) => s + i.subtotal, 0);
   const points = value * POINTS_PER_BAHT;
 
-  const [valuingBusy, setValuingBusy] = useState(false);
   const confirm = async () => {
     if (!valuing || items.length === 0 || valuingBusy) return;
     setValuingBusy(true);

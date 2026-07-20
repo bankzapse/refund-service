@@ -62,9 +62,8 @@ NEXT_PUBLIC_COMPANY_PROMPTPAY=  # พร้อมเพย์บริษัท 
 # SMS OK (OTP ยืนยันเบอร์โทร) — ต่อโค้ดเสร็จแล้ว
 SMSOK_API_KEY=                 # จาก https://developer.smsok.co
 SMSOK_API_SECRET=
-SMSOK_SENDER=MindFull          # ต้องลงทะเบียน+อนุมัติ Sender ID ก่อน (case-sensitive)
-OTP_SECRET=                    # (โหมดเดโม) สุ่มสตริงยาว ๆ — ไม่ตั้ง = fallback ใช้ SMSOK_API_SECRET
-SEND_SMS_HOOK_SECRET=          # (โหมด Supabase) secret จาก Supabase Send SMS Hook (v1,whsec_...)
+SMSOK_SENDER=Chao-Dee          # ต้องลงทะเบียน+อนุมัติ Sender ID ก่อน (case-sensitive) — ต้องเป็นชนิด OTP/Transactional
+OTP_SECRET=                    # [จำเป็น] สุ่มสตริงยาว ๆ (openssl rand -base64 32) — ไม่ตั้ง = fallback ใช้ SMSOK_API_SECRET
 ```
 > ไม่ใส่ env = รันโหมดเดโม (localStorage) ได้เลย · ใส่ครบ = ใช้ Supabase จริง
 > ใส่ `SMSOK_*` เมื่อไหร่ หน้า `/register` จะส่ง OTP จริงทันที (ไม่ใส่ = โหมดทดลอง กรอกเลขอะไรก็ได้ 6 หลัก)
@@ -73,13 +72,13 @@ SEND_SMS_HOOK_SECRET=          # (โหมด Supabase) secret จาก Supaba
 - `src/lib/smsok.ts` — client ยิง `POST https://api.smsok.co/s` (Basic auth `KEY:SECRET`)
 - `src/lib/otp.ts` — ออกโค้ด 6 หลัก + โทเคนเซ็น HMAC (ไร้สถานะ ไม่ต้องมี DB) หมดอายุ 5 นาที
 - `POST /api/otp/send` (คูลดาวน์ 30 วิ/เบอร์) · `POST /api/otp/verify`
-- **โหมดเดโม** (`SMSOK_*` แต่ไม่มี Supabase): หน้า `/register` ยิง OTP ผ่าน `/api/otp/*` โดยตรง
-- **โหมด Supabase ใช้ Send SMS Hook** (ไม่ต้องมี Twilio): สมัคร/ลืมรหัส ใช้ OTP ในตัว Supabase แต่การ**ส่ง SMS วิ่งผ่าน hook → SMS OK** ที่ `POST /api/auth/sms-hook` (`src/app/api/auth/sms-hook/route.ts` — ตรวจลายเซ็น Standard Webhooks ด้วย `SEND_SMS_HOOK_SECRET`)
-- **ยังต้องทำฝั่ง SMS OK:** (1) ลงทะเบียน+อนุมัติ Sender ID `MindFull` (2) อัปเกรดบัญชีจาก trial — บัญชี trial จะถูกล็อกผู้ส่ง/ข้อความเป็นค่า default
-- **⚙️ ตั้งค่า Supabase Auth (จำเป็น):**
-  1. Authentication → Providers → **Phone: เปิด** + **Enable phone confirmations: เปิด** (SMS provider เลือกอะไรก็ได้ เดี๋ยว hook override)
-  2. Authentication → Hooks → **Send SMS Hook: เปิด** → HTTP → URL = `https://<domain>/api/auth/sms-hook` → คัดลอก **secret** (`v1,whsec_...`) ไปใส่ env `SEND_SMS_HOOK_SECRET`
-  3. Redeploy Vercel
+- **ทั้งสองโหมดใช้ OTP ของแอปเอง** — ยิงผ่าน `/api/otp/*` → SMS OK โดยตรง **ไม่พึ่ง Supabase Send SMS Hook** (ไม่ต้องมี Twilio)
+  - โหมด Supabase: `/register` → `/api/otp/send` → ยืนยันที่ `/api/auth/register` (service-role, `phone_confirm: true`) → `signInWithPassword`
+  - ลืมรหัสผ่าน: `/api/otp/send` → `/api/auth/reset-password`
+  - กัน brute-force/สแปมด้วยตาราง `otp_throttle` (คูลดาวน์ 30 วิ · 15 ครั้ง/เบอร์/วัน · ล็อกเมื่อกรอกผิดหลายครั้ง)
+- **ยังต้องทำฝั่ง SMS OK:** (1) ลงทะเบียน+อนุมัติ Sender ID `Chao-Dee` ชนิด OTP/Transactional (ไม่ใช่ Generic/โฆษณา ไม่งั้นโดน Anti-Spam) (2) อัปเกรดบัญชีจาก trial — บัญชี trial จะถูกล็อกผู้ส่ง/ข้อความเป็นค่า default
+- **⚙️ ตั้งค่า Supabase Auth:** Authentication → Providers → **Phone: เปิด** (ไม่ต้องเปิด Send SMS Hook และไม่ต้องตั้ง SMS provider — แอปสร้างบัญชีด้วย service-role พร้อม `phone_confirm` เอง)
+- เช็คความพร้อมได้ที่ `GET /api/health` → ต้องได้ `canSellerOtp: true`
 - ทดสอบจริง: เปิด `/register` → กรอกเบอร์ตัวเอง → รับ SMS (ผ่าน SMS OK) → กรอกโค้ด → เข้าระบบ
 
 ### Supabase — ความพร้อม (สำคัญ)
