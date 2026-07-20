@@ -399,19 +399,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [db.users],
   );
 
-  // สมัครสมาชิก (ผู้ขาย) — เรียกหลังยืนยัน OTP แล้ว
+  // สมัครสมาชิก (ผู้ขาย) — เดโมเท่านั้น เรียกหลังยืนยัน OTP แล้ว
+  // โหมด Supabase ไม่ผ่านทางนี้: /register ยืนยัน OTP ฝั่ง server ที่ /api/auth/register
+  // (service-role + phone_confirm) แล้ว signInWithPassword เอง
   const registerAccount = useCallback(
     async (input: { name?: string; phone: string; email?: string; password: string }): Promise<{ ok: boolean; error?: string }> => {
       const phone = input.phone.trim();
-      if (supabaseConfigured) {
-        try {
-          const { error } = await createClient().auth.signUp({ phone: toE164(phone), password: input.password, options: { data: { name: input.name?.trim(), role: "seller" } } });
-          if (error) return { ok: false, error: friendlyError(error) };
-          return { ok: true };
-        } catch (e) {
-          return { ok: false, error: friendlyError(e) };
-        }
-      }
+      // กันเขียนบัญชีลง localStorage โดยไม่ตั้งใจถ้ามี caller ใหม่เรียกผิดโหมด
+      if (supabaseConfigured) return { ok: false, error: "โหมด Supabase ต้องสมัครผ่าน /api/auth/register" };
       if (db.users.some((u) => u.phone === phone)) return { ok: false, error: "เบอร์นี้มีบัญชีแล้ว" };
       const user: User = {
         id: uid("u-"),

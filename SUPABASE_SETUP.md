@@ -10,8 +10,9 @@ src/lib/supabase/client.ts     client ฝั่ง browser
 src/lib/supabase/server.ts     client ฝั่ง server (RSC/route)
 src/lib/supabase/middleware.ts รีเฟรช session (guarded — ข้ามถ้าไม่มี env)
 src/middleware.ts              เรียก updateSession ทุก request
-src/lib/supabase/auth.ts       server actions: signUp/signIn/OTP/signOut
 src/lib/supabase/queries.ts    data seam: fetchProfile/fetchCentralPrices/settleBill/drawWinner/setUserStatus
+src/lib/otp.ts + /api/otp/*    OTP ของแอปเอง (HMAC ไร้สถานะ → SMS OK) ใช้ทั้งสมัคร/ลืมรหัสผ่าน
+/api/auth/register             สมัครผู้ขาย: ยืนยัน OTP ฝั่ง server → สร้างบัญชีด้วย service-role
 ```
 
 ---
