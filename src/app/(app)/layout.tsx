@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { BottomNav } from "@/components/BottomNav";
 import { BootLoader, AppSkeleton } from "@/components/ui";
+import { currentPathForNext, withNext } from "@/lib/utils";
 import { Ban } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { ready, currentUser, logout } = useStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (ready && !currentUser) router.replace("/app");
-  }, [ready, currentUser, router]);
+    // พา path ที่ตั้งใจไปด้วย (?next=) — ไม่งั้น deep link จาก LINE rich menu / ลิงก์แชร์
+    // จะกลายเป็นหน้าแรกเสมอหลังล็อกอิน
+    if (ready && !currentUser) router.replace(withNext("/app", currentPathForNext(pathname)));
+  }, [ready, currentUser, router, pathname]);
 
   if (!ready) return <AppSkeleton />; // กำลังโหลดข้อมูล → โครงหน้า
   if (!currentUser) return <BootLoader />; // ไม่มี session → กำลังพาไปหน้าเลือกพอร์ทัล

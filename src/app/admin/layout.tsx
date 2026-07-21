@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, currentPathForNext, withNext } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { canAccessAdminMenu } from "@/lib/permissions";
 import { Logo } from "@/components/Logo";
@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentUser) { router.replace("/app"); return; }
+    if (!currentUser) { router.replace(withNext("/app", currentPathForNext(pathname))); return; }
     if (currentUser.role !== "admin") { router.replace("/home"); return; }
     if (currentUser.owner) {
       if (!PICKUP_ENABLED && pathname === "/admin") router.replace("/admin/dropgo");

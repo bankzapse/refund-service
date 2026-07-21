@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, currentPathForNext, withNext } from "@/lib/utils";
 import { PICKUP_ENABLED } from "@/lib/features";
 import { Logo } from "@/components/Logo";
 import { BootLoader, ConsoleSkeleton } from "@/components/ui";
@@ -26,7 +26,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentUser) router.replace("/app");
+    if (!currentUser) router.replace(withNext("/app", currentPathForNext(pathname)));
     else if (currentUser.role !== "buyer") router.replace("/home");
     else if (currentUser.status === "suspended") router.replace("/home");
     // Drop-only: หน้าภาพรวม (บิล) ปิดอยู่ → เด้งไปหน้าตู้

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { franchiseById } from "@/lib/selectors";
-import { cn } from "@/lib/utils";
+import { cn, currentPathForNext, withNext } from "@/lib/utils";
 import { LogOut, LayoutDashboard, Box, PackageOpen, FileText, Landmark, Banknote, LayoutGrid } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { BootLoader, ConsoleSkeleton } from "@/components/ui";
@@ -26,9 +26,9 @@ export default function FranchiseLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentUser) router.replace("/app");
+    if (!currentUser) router.replace(withNext("/app", currentPathForNext(pathname)));
     else if (currentUser.role !== "franchise") router.replace("/home");
-  }, [ready, currentUser, router]);
+  }, [ready, currentUser, router, pathname]);
 
   if (!ready) return <ConsoleSkeleton />;
   if (!currentUser || currentUser.role !== "franchise") {

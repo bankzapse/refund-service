@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { supabaseConfigured } from "@/lib/supabase/config";
 import { Logo } from "@/components/Logo";
 import { BootLoader, Spinner } from "@/components/ui";
+import { readNextParam, withNext } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 import { User, Building2, ShieldCheck, Store, ChevronRight, ArrowLeft, Check } from "lucide-react";
 
@@ -27,9 +28,9 @@ export default function AppChooser() {
   const router = useRouter();
   const [busy, setBusy] = useState<Role | null>(null);
 
-  // ยังไม่ล็อกอิน + ปิด demo → ไปหน้าเข้าสู่ระบบ
+  // ยังไม่ล็อกอิน + ปิด demo → ไปหน้าเข้าสู่ระบบ (ส่งต่อ ?next= ให้ถึงหน้าล็อกอิน)
   useEffect(() => {
-    if (DEMO_DISABLED && ready && !currentUser) router.replace("/login");
+    if (DEMO_DISABLED && ready && !currentUser) router.replace(withNext("/login", readNextParam()));
   }, [ready, currentUser, router]);
 
   if (!ready) return <BootLoader />;
@@ -82,7 +83,7 @@ export default function AppChooser() {
 
   // ── โหมดเดโม (ยังไม่ล็อกอิน) : เลือกระบบไม่ต้องล็อกอิน ──
   if (DEMO_DISABLED) return <BootLoader />; // กำลัง redirect ไป /login
-  const enterDemo = (r: Role) => { loginAs(ROLE_META[r].demoId); router.push(ROLE_META[r].dest); };
+  const enterDemo = (r: Role) => { loginAs(ROLE_META[r].demoId); router.push(readNextParam() ?? ROLE_META[r].dest); };
   return (
     <Shell subtitle="เลือกระบบที่ต้องการเข้าใช้ — โหมดสาธิต ไม่ต้องล็อกอิน">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

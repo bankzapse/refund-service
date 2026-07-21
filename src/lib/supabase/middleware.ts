@@ -51,7 +51,13 @@ export async function updateSession(request: NextRequest) {
       response.cookies.getAll().forEach((c) => r.cookies.set(c.name, c.value));
       return r;
     };
-    if (!user) return redirectTo("/login");
+    // ยังไม่ล็อกอิน → ไปหน้าล็อกอิน พร้อมจำปลายทางไว้ (?next=) ให้กลับมาที่เดิมได้
+    // สำคัญกับ deep link เช่น LINE rich menu ที่ลิงก์ตรงมา /points, /drop
+    // (ปลายทางถูกกรองอีกชั้นด้วย safeNextPath ฝั่ง client ก่อนใช้จริง)
+    if (!user) {
+      const nextPath = path + request.nextUrl.search;
+      return redirectTo(`/login?next=${encodeURIComponent(nextPath)}`);
+    }
     if (path.startsWith("/admin") && role !== "admin") return redirectTo(homeFor(role));
     if (path.startsWith("/shop") && role !== "buyer") return redirectTo(homeFor(role));
     // แอดมินไม่ควรอยู่ในแอปมือถือ → ส่งไป /admin

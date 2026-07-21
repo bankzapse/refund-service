@@ -8,6 +8,7 @@ import { supabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { liffConfigured, getLineProfile, getLiffAccessToken } from "@/lib/liff";
 import { AuthShell } from "@/components/AuthShell";
+import { readNextParam } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound, PackageSearch, ArrowLeft } from "lucide-react";
 
@@ -122,7 +123,9 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
       switchRole(target); // อัปเดต role → effect ทำงานรอบถัดไป → redirect
       return;
     }
-    router.replace(destFor(currentUser.role)); // redirect ตาม role จริง (สลับสำเร็จ=ไปคอนโซลนั้น, ไม่สำเร็จ=คอนโซลเดิม ไม่เด้งวน)
+    // ?next= (deep link จาก LINE rich menu / ลิงก์แชร์) มาก่อน — ถ้าไม่มีค่อยไปตาม role
+    // ถ้า next ชี้ไปคอนโซลที่บัญชีไม่มีสิทธิ์ guard ของหน้านั้นจะเด้งกลับ /home เอง (ไม่วน)
+    router.replace(readNextParam() ?? destFor(currentUser.role));
   }, [currentUser, portal, switchRole, router]);
 
   // เลือก role เป้าหมายของ portal นี้ที่บัญชีถือได้ (รองรับ multi-role) — คืน null ถ้าไม่มีสิทธิ์

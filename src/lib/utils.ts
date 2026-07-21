@@ -93,3 +93,40 @@ export function thaiMonthLabel(month: string) {
     new Date(y, m - 1, 1),
   );
 }
+
+/* ---------------- deep link หลังล็อกอิน (?next=) ---------------- */
+
+/**
+ * กรองค่า ?next= ให้เหลือเฉพาะเส้นทางภายในเว็บเรา — คืน null ถ้าใช้ไม่ได้
+ *
+ * 🔒 กัน open redirect: "//evil.com" กับ "/\evil.com" เบราว์เซอร์ตีความเป็นโดเมนภายนอก
+ * (protocol-relative) ถ้าปล่อยผ่านจะพาผู้ใช้ออกไปหน้าปลอมได้หลังล็อกอิน
+ * และตัดหน้าล็อกอิน/เลือกพอร์ทัลออก กันเด้งวนกลับที่เดิม
+ */
+export function safeNextPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s.startsWith("/")) return null;
+  if (s.startsWith("//") || s.startsWith("/\\")) return null;
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f]/.test(s)) return null; // control char (เลี่ยงการ bypass ด้วย \t \n)
+  if (s === "/app" || /^\/(login|register|forgot-password|auth)(\/|\?|$)/.test(s)) return null;
+  return s;
+}
+
+/** path + query ปัจจุบัน (ใช้ตอนเด้งไปล็อกอิน เพื่อกลับมาที่เดิมได้) — client เท่านั้น */
+export function currentPathForNext(pathname: string): string {
+  if (typeof window === "undefined") return pathname;
+  return pathname + window.location.search;
+}
+
+/** อ่าน ?next= จาก URL ปัจจุบัน (ผ่านตัวกรองแล้ว) — client เท่านั้น */
+export function readNextParam(): string | null {
+  if (typeof window === "undefined") return null;
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"));
+}
+
+/** เติม ?next= เข้าไปในปลายทาง (ถ้ามี) */
+export function withNext(dest: string, next: string | null): string {
+  return next ? `${dest}?next=${encodeURIComponent(next)}` : dest;
+}
