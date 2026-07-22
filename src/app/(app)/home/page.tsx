@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useStore } from "@/lib/store";
 import { PriceList } from "@/components/PriceList";
 import { Sheet } from "@/components/ui";
@@ -60,19 +61,30 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-5 pb-16 pt-11 text-white">
+      {/* hero — รูปจริงหลังไล่สี ให้ดูเป็นแบรนด์ ไม่ใช่ฟอร์มเปล่า
+          ทับด้วยไล่สีเข้มพอให้ตัวหนังสือขาวอ่านออกกลางแดด (ผู้ขายใช้งานนอกอาคาร) */}
+      <div className="relative overflow-hidden px-5 pb-16 pt-11 text-white">
+        <Image
+          src="/img/hero.jpg"
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-600/95 via-brand-600/90 to-brand-800/95" />
         <div className="absolute -right-12 -top-10 h-44 w-44 rounded-full bg-white/10" />
         <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/[0.06]" />
         <div className="relative flex items-center justify-between">
           <div>
             <p className="text-sm text-white/80">สวัสดี 👋</p>
-            <h1 className="text-xl font-extrabold">{u.name}</h1>
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs">
+            <h1 className="text-xl font-extrabold drop-shadow-sm">{u.name}</h1>
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs backdrop-blur-sm">
               {isSeller ? "ผู้ขาย" : "ผู้ซื้อ / คนขับ"}
             </span>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
             <Recycle className="h-7 w-7" />
           </div>
         </div>
@@ -83,7 +95,7 @@ export default function HomePage() {
         <div className="card grid grid-cols-2 divide-x divide-neutral-100">
           {isSeller ? (
             <>
-              <StatMini label="คะแนนสะสม" value={formatBaht(points)} icon={<Coins className="h-4 w-4" />} />
+              <StatMini label="คะแนนสะสม" value={formatBaht(points)} sub={`≈ ฿${formatBaht(points)}`} icon={<Coins className="h-4 w-4" />} />
               <StatMini label="ถุงของฉัน" value={`${dstats.totalBags} ถุง`} icon={<Recycle className="h-4 w-4" />} />
             </>
           ) : (
@@ -166,11 +178,12 @@ export default function HomePage() {
   );
 }
 
-function StatMini({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function StatMini({ label, value, icon, sub }: { label: string; value: string; icon: React.ReactNode; sub?: string }) {
   return (
     <div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
       <span className="flex items-center gap-1 text-xs text-neutral-400">{icon}{label}</span>
       <span className="text-lg font-extrabold text-neutral-800">{value}</span>
+      {sub && <span className="text-xs font-medium text-brand-600">{sub}</span>}
     </div>
   );
 }
