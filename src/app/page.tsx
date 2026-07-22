@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { Photo } from "@/components/Photo";
+import { LiffEntry } from "@/components/LiffEntry";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESC, LEGAL_NAME, LEGAL_NAME_EN, SUPPORT_EMAIL, SUPPORT_TEL } from "@/lib/site";
 import {
   Recycle, ScanLine, Coins, Banknote, Boxes, Leaf, ShieldCheck, MapPin, ArrowRight,
@@ -106,6 +107,8 @@ export default function Landing() {
   return (
     <div className="min-h-dvh scroll-smooth bg-white text-neutral-800">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
+      {/* เปิดจากในแอป LINE → เข้าแอปเลย ไม่ต้องผ่านหน้าการตลาด */}
+      <LiffEntry />
       {/* NAV */}
       <header className="sticky top-0 z-40 border-b border-neutral-100 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-5">
