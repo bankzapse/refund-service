@@ -10,8 +10,9 @@ import { liffConfigured, getLineProfile, getLiffAccessToken, isInLineClient } fr
 import { AuthShell } from "@/components/AuthShell";
 import { LineSetup } from "@/components/LineSetup";
 import { readNextParam } from "@/lib/utils";
+import { isValidUsername } from "@/lib/username";
 import type { Role } from "@/lib/types";
-import { Loader2, MessageCircle, User, Building2, ShieldCheck, Phone, KeyRound, PackageSearch, ArrowLeft } from "lucide-react";
+import { Loader2, MessageCircle, User, UserRound, Building2, ShieldCheck, Phone, KeyRound, PackageSearch, ArrowLeft } from "lucide-react";
 
 export type PortalKey = "seller" | "franchise" | "company" | "center";
 const PHONE_RE = /^0\d{8,9}$/;
@@ -27,6 +28,8 @@ interface Portal {
   badge: string;
   line: boolean;
   register: boolean;
+  /** ช่องแรกของฟอร์ม: ผู้ขาย=เบอร์ · หลังบ้าน=ชื่อผู้ใช้ (ช่องรับได้ทั้งคู่เสมอ) */
+  loginBy: "phone" | "username";
   allowedRoles: Role[];
   demoPhone: string;
 }
@@ -43,6 +46,7 @@ export const PORTALS: Record<PortalKey, Portal> = {
     badge: "bg-brand-50 text-brand-700",
     line: true,
     register: true,
+    loginBy: "phone",
     allowedRoles: ["seller"],
     demoPhone: "0812345678",
   },
@@ -57,6 +61,7 @@ export const PORTALS: Record<PortalKey, Portal> = {
     badge: "bg-emerald-50 text-emerald-700",
     line: false,
     register: false,
+    loginBy: "username",
     allowedRoles: ["franchise"],
     demoPhone: "0955550000",
   },
@@ -71,6 +76,7 @@ export const PORTALS: Record<PortalKey, Portal> = {
     badge: "bg-brand-50 text-brand-700",
     line: false,
     register: false,
+    loginBy: "username",
     allowedRoles: ["admin"],
     demoPhone: "0900000000",
   },
@@ -85,6 +91,7 @@ export const PORTALS: Record<PortalKey, Portal> = {
     badge: "bg-slate-100 text-slate-700",
     line: false,
     register: false,
+    loginBy: "username",
     allowedRoles: ["buyer"],
     demoPhone: "0876543210",
   },
@@ -220,7 +227,15 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
   const doLogin = async () => {
     if (busy) return;
     setErr("");
-    if (!PHONE_RE.test(phone.trim())) return setErr("กรอกเบอร์โทรให้ถูกต้อง (10 หลัก ขึ้นต้น 0)");
+    const id = phone.trim();
+    if (portal.loginBy === "username") {
+      // รับได้ทั้งชื่อผู้ใช้และเบอร์ (บัญชีหลังบ้านเดิมยังไม่มี username)
+      if (!isValidUsername(id) && !PHONE_RE.test(id)) {
+        return setErr("กรอกชื่อผู้ใช้ (a-z, 0-9, . _ - ยาว 3–32 ตัว) หรือเบอร์โทร 10 หลัก");
+      }
+    } else if (!PHONE_RE.test(id)) {
+      return setErr("กรอกเบอร์โทรให้ถูกต้อง (10 หลัก ขึ้นต้น 0)");
+    }
     if (!password) return setErr("กรอกรหัสผ่าน");
     setBusy(true);
     try {
@@ -274,18 +289,38 @@ export function AuthScreen({ portalKey }: { portalKey: PortalKey }) {
 
       <div className="space-y-3">
         <div>
-          <label className="label">เบอร์โทรศัพท์</label>
+          {/* พอร์ทัลหลังบ้านใช้ชื่อผู้ใช้ · ผู้ขายใช้เบอร์ (แต่ช่องเดียวกันรับได้ทั้งคู่
+              เพื่อไม่ให้บัญชีหลังบ้านเดิมที่ยังไม่มี username ล็อกเอาต์) */}
+          <label className="label">{portal.loginBy === "username" ? "ชื่อผู้ใช้" : "เบอร์โทรศัพท์"}</label>
           <div className="relative">
-            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <input
-              className="input pl-9"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="08x-xxx-xxxx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-              onKeyDown={(e) => e.key === "Enter" && doLogin()}
-            />
+            {portal.loginBy === "username" ? (
+              <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            ) : (
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            )}
+            {portal.loginBy === "username" ? (
+              <input
+                className="input pl-9"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={32}
+                placeholder="ชื่อผู้ใช้ หรือ เบอร์โทร"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.trim())}
+                onKeyDown={(e) => e.key === "Enter" && doLogin()}
+              />
+            ) : (
+              <input
+                className="input pl-9"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="08x-xxx-xxxx"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && doLogin()}
+              />
+            )}
           </div>
         </div>
         <div>

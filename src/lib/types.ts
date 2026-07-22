@@ -104,6 +104,7 @@ export interface User {
   roles?: Role[]; // บทบาททั้งหมดที่บัญชีนี้ถือได้ (multi-role) — ไม่ระบุ = [role]
   name: string;
   phone: string;
+  username?: string; // ชื่อผู้ใช้สำหรับพอร์ทัลหลังบ้าน (บริษัท/แฟรนไชส์/ศูนย์คัดแยก) — ดู lib/username.ts
   email?: string;
   password?: string; // โหมดเดโม (localStorage) เท่านั้น — Supabase ใช้ auth ของตัวเอง
   payout?: PayoutAccount; // บัญชีรับเงินโอน (ต้องบริษัทอนุมัติก่อนทำธุรกรรม)

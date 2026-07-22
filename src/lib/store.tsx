@@ -11,6 +11,7 @@ import { createClient } from "./supabase/client";
 import * as repo from "./supabase/repo";
 import { friendlyError } from "./authError";
 import { liffConfigured, getLiffAccessToken } from "./liff";
+import { looksLikePhone, usernameToEmail } from "./username";
 
 /** รหัสผ่านเริ่มต้นของบัญชีเดโม (seed users) — โหมดเดโมเท่านั้น */
 export const DEMO_PASSWORD = "123456";
@@ -374,14 +375,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // เข้าสู่ระบบด้วยเบอร์ + รหัสผ่าน
   // เดโม: ตรวจกับ user ในเครื่อง (ไม่ตั้ง session — คืน user ให้ AuthScreen ตรวจ role ก่อน loginAs)
+  /**
+   * เข้าสู่ระบบด้วย "เบอร์โทร" หรือ "ชื่อผู้ใช้" (พอร์ทัลหลังบ้านใช้ชื่อผู้ใช้)
+   * รับทั้งสองแบบเพื่อไม่ให้บัญชีเดิมที่ยังไม่มี username ล็อกเอาต์
+   */
   const loginWithPassword = useCallback(
-    async (phone: string, password: string, portalRole?: Role): Promise<{ ok: boolean; user?: User; error?: string }> => {
-      const p = phone.trim();
+    async (identifier: string, password: string, portalRole?: Role): Promise<{ ok: boolean; user?: User; error?: string }> => {
+      const p = identifier.trim();
       if (supabaseConfigured) {
         try {
+          let creds: { phone: string; password: string } | { email: string; password: string };
+          if (looksLikePhone(p)) {
+            creds = { phone: toE164(p.replace(/\D/g, "")), password };
+          } else {
+            const email = usernameToEmail(p);
+            if (!email) return { ok: false, error: "ชื่อผู้ใช้ไม่ถูกต้อง (a-z, 0-9, . _ - ยาว 3–32 ตัว)" };
+            creds = { email, password };
+          }
           // เฉพาะ signIn เท่านั้นในเส้นทางวิกฤต + timeout กันแขวนค้าง (การสลับบทบาทจัดการที่ effect หลัง login)
           const { error } = await withTimeout(
-            createClient().auth.signInWithPassword({ phone: toE164(p), password }),
+            createClient().auth.signInWithPassword(creds),
             15000,
             "เข้าสู่ระบบช้าผิดปกติ",
           );
@@ -392,7 +405,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           return { ok: false, error: friendlyError(e) };
         }
       }
-      const u = db.users.find((x) => x.phone === p);
+      const lower = p.toLowerCase();
+      const u = db.users.find((x) => x.phone === p || x.username?.toLowerCase() === lower);
       if (!u) return { ok: false, error: "ไม่พบบัญชีนี้ — ลงทะเบียนก่อน" };
       if ((u.password ?? DEMO_PASSWORD) !== password) return { ok: false, error: "รหัสผ่านไม่ถูกต้อง" };
       return { ok: true, user: u };

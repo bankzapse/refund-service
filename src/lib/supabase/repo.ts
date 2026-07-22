@@ -18,7 +18,7 @@ function toLocalPhone(p?: string | null): string {
 }
 function toUser(p: any): User {
   return {
-    id: p.id, role: p.role, name: p.name, phone: toLocalPhone(p.phone),
+    id: p.id, role: p.role, name: p.name, phone: toLocalPhone(p.phone), username: p.username ?? undefined,
     email: p.email ?? undefined, lineUserId: p.line_user_id ?? undefined,
     lineConnected: !!p.line_connected, baseLat: p.base_lat ?? undefined, baseLng: p.base_lng ?? undefined,
     status: p.status ?? "active", credit: p.credit != null ? Number(p.credit) : 0, partner: !!p.partner,
