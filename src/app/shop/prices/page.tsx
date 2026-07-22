@@ -5,6 +5,7 @@ import { MATERIALS, CATEGORIES } from "@/lib/materials";
 import { buyerPrice } from "@/lib/selectors";
 import { formatBaht } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
+import { MaterialThumb } from "@/components/MaterialThumb";
 
 export default function ShopPricesPage() {
   const { db, currentUser, setBuyerPrice } = useStore();
@@ -28,7 +29,7 @@ export default function ShopPricesPage() {
                 const isCustom = custom[m.id] != null;
                 return (
                   <div key={m.id} className="flex items-center gap-3 py-2.5">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-lg">{m.emoji}</span>
+                    <MaterialThumb id={m.id} emoji={m.emoji} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-neutral-800">{m.name}</p>
                       <p className="text-xs text-neutral-400">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Job } from "@/lib/types";
 import { StatusBadge } from "./ui";
 import { MATERIAL_MAP } from "@/lib/materials";
+import { MaterialThumb } from "./MaterialThumb";
 import { formatBaht, thaiDateShort } from "@/lib/utils";
 import { formatDistance } from "@/lib/geo";
 import { MapPin, CalendarClock, ChevronRight } from "lucide-react";
@@ -16,7 +17,7 @@ export function JobCard({
   distanceKm?: number;
 }) {
   const hasItems = job.items.length > 0;
-  const emojis = hasItems ? job.items.map((i) => MATERIAL_MAP[i.materialId]?.emoji ?? "♻️").slice(0, 4) : ["♻️"];
+  const icons = hasItems ? job.items.slice(0, 4).map((i) => i.materialId) : [""];
   const itemsLabel = hasItems ? job.items.map((i) => i.name).join(" · ") : "ยังไม่ระบุรายการ · ตกลงหน้างาน";
   const total = job.finalAmount ?? job.estimatedTotal;
 
@@ -36,9 +37,9 @@ export function JobCard({
 
       <div className="flex items-start gap-3">
         <div className="flex shrink-0 -space-x-1.5">
-          {emojis.map((e, i) => (
-            <span key={i} className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-base ring-2 ring-white">
-              {e}
+          {icons.map((id, i) => (
+            <span key={i} className="rounded-full ring-2 ring-white">
+              <MaterialThumb id={id} emoji={MATERIAL_MAP[id]?.emoji} size="h-8 w-8" rounded="rounded-full" />
             </span>
           ))}
         </div>

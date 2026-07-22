@@ -11,6 +11,7 @@ import { BAG_STATUS_META, POINTS_PER_BAHT, cabinetFullCode } from "@/lib/types";
 import type { MeshBag, BagItem } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
 import { ArrowLeft, Box, Coins, Scale, PackageOpen, CheckCircle2, Trophy } from "lucide-react";
+import { MaterialThumb } from "@/components/MaterialThumb";
 
 export default function CabinetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -145,7 +146,7 @@ export default function CabinetDetailPage() {
           <p className="text-xs text-neutral-500">กรอกน้ำหนัก (กก.) ของแต่ละวัสดุที่คัดแยกได้จากถุงนี้</p>
           {MATERIALS.map((m) => (
             <div key={m.id} className="flex items-center gap-2.5 rounded-xl border border-neutral-200 p-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-base">{m.emoji}</span>
+              <MaterialThumb id={m.id} emoji={m.emoji} size="h-9 w-9" rounded="rounded-lg" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-neutral-700">{m.name}</p>
                 <p className="text-[11px] text-neutral-400">฿{formatBaht(centralPrice(db, m.id))}/กก.</p>

@@ -13,6 +13,7 @@ import { computeSettlement, feeRateLabel, MIN_CREDIT } from "@/lib/fees";
 import { jobValueForBuyer, buyerPrice } from "@/lib/selectors";
 import { PromptPayQR } from "@/components/PromptPayQR";
 import { MapPin, Phone, CalendarClock, User, StickyNote, Ticket, MessageCircle, Truck, Check, Wallet } from "lucide-react";
+import { MaterialThumb } from "@/components/MaterialThumb";
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -101,9 +102,7 @@ export default function JobDetailPage() {
           <div className="divide-y divide-neutral-100">
             {job.items.map((it) => (
               <div key={it.materialId} className="flex items-center gap-3 py-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-base">
-                  {MATERIAL_MAP[it.materialId]?.emoji ?? "♻️"}
-                </span>
+                <MaterialThumb id={it.materialId} emoji={MATERIAL_MAP[it.materialId]?.emoji} size="h-9 w-9" rounded="rounded-lg" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-800">{it.name}</p>
                   <p className="text-xs text-neutral-400">{it.qty} {it.unit} × ฿{formatBaht(it.pricePerUnit)}</p>
