@@ -23,10 +23,14 @@ export default function DropPage() {
   const addBagCode = (bag: string) =>
     setBags((b) => (!bag || b.includes(bag) || b.length >= MAX_BAGS_PER_DROP ? b : [...b, bag]));
 
-  // รับสตริงจาก QR/พิมพ์เอง → แยกแฟรนไชส์+ตู้+ถุง (TH-XX-XXXXXX)
+  // รับสตริงจาก QR/พิมพ์เอง → แยกตู้+เลขถุง (TK01-0000001)
+  // parser ยังรับแบบ 3 ส่วนของเดิมได้ เผื่อ QR รุ่นเก่าที่มีรหัสแฟรนไชส์นำหน้า
   const handleCode = (raw: string) => {
     const { franchise: f, cabinet: c, bag } = parseBagQr(raw);
-    if (f) setFranchise(f);
+    // ⚠️ ต้องเซ็ตทุกครั้งแม้เป็นค่าว่าง — รหัสรูปแบบใหม่ (TK01-0000001) ไม่มีส่วนแฟรนไชส์
+    // ถ้าใช้ `if (f)` ค่าเก่าจากรหัสที่พิมพ์ผิดก่อนหน้าจะค้าง แล้วไปไม่ตรงกับ
+    // franchiseCode ของตู้ → ขึ้น "ไม่พบตู้" ทั้งที่รหัสตู้ถูก (ต้องรีเฟรชหน้าถึงหาย)
+    setFranchise(f);
     if (c) setCabinet(c);
     if (bag) addBagCode(bag);
     setManual("");
@@ -87,7 +91,7 @@ export default function DropPage() {
             <h2 className="font-bold text-neutral-800">สแกน QR บนถุง</h2>
             <span className="ml-auto text-xs font-medium text-brand-700">{bags.length} / {MAX_BAGS_PER_DROP}</span>
           </div>
-          <p className="mb-3 text-xs text-neutral-400">รหัสเดียวมีทั้งแฟรนไชส์ ตู้ และถุง (เช่น <span className="font-mono">TH-XX-XXXXXX</span>) — สแกนครั้งเดียวจบ</p>
+          <p className="mb-3 text-xs text-neutral-400">รหัสบนถุงมีทั้งรหัสตู้และเลขถุง (เช่น <span className="font-mono">TK01-0000001</span>) — สแกนครั้งเดียวจบ</p>
 
           {/* detected cabinet */}
           {cab ? (
@@ -124,7 +128,7 @@ export default function DropPage() {
           <div className="relative mt-2">
             <input
               className="input pr-20 text-sm"
-              placeholder="หรือพิมพ์รหัส เช่น TH-XX-XXXXXX"
+              placeholder="หรือพิมพ์รหัส เช่น TK01-0000001"
               value={manual}
               onChange={(e) => setManual(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addManual()}
