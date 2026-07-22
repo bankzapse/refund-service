@@ -14,16 +14,25 @@ import { writeFile } from "node:fs/promises";
 
 const W = 2500;
 const H = 1686;
-const COL = [0, 833, 1666];
-const COL_W = [833, 833, 834];
+// แถวบน 2 ช่องใหญ่ (งานที่ใช้บ่อยสุด) · แถวล่าง 3 ช่อง
 const ROW_H = 843;
+const TOP = [
+  { x: 0, w: 1250 },
+  { x: 1250, w: 1250 },
+];
+const BOTTOM = [
+  { x: 0, w: 833 },
+  { x: 833, w: 833 },
+  { x: 1666, w: 834 },
+];
+const cellBox = (i) =>
+  i < 2 ? { ...TOP[i], y: 0 } : { ...BOTTOM[i - 2], y: ROW_H };
 
 // ไอคอนวาดด้วย path ล้วน (ไม่พึ่งฟอนต์ emoji ที่อาจไม่มีบนเครื่อง build)
 const CELLS = [
   { label: "หย่อนถุง", sub: "สแกน QR บนถุง", icon: "scan", accent: "#16a34a" },
   { label: "คะแนน & แลกเงิน", sub: "ดูยอด · โอนพร้อมเพย์", icon: "coin", accent: "#0d9488" },
   { label: "สถานะถุง", sub: "ติดตามการคัดแยก", icon: "box", accent: "#0891b2" },
-  { label: "ราคาวันนี้", sub: "ราคารับซื้อของเก่า", icon: "tag", accent: "#65a30d" },
   { label: "หน้าแรก", sub: "ภาพรวมบัญชีของฉัน", icon: "home", accent: "#059669" },
   { label: "โปรไฟล์", sub: "บัญชี · ตั้งค่า", icon: "user", accent: "#475569" },
 ];
@@ -45,11 +54,7 @@ const esc = (s) =>
 
 const cell = (i) => {
   const c = CELLS[i];
-  const col = i % 3;
-  const row = Math.floor(i / 3);
-  const x = COL[col];
-  const y = row * ROW_H;
-  const w = COL_W[col];
+  const { x, y, w } = cellBox(i);
   const cx = x + w / 2;
   const cy = y + ROW_H / 2;
   return `

@@ -43,16 +43,14 @@ const api = async (path, init = {}, base = "https://api.line.me") => {
 
 /** พิกัดต้องตรงกับ scripts/build-richmenu-image.mjs */
 const W = 2500, H = 1686, ROW = 843;
-const COLS = [
-  { x: 0, w: 833 },
-  { x: 833, w: 833 },
-  { x: 1666, w: 834 },
-];
+// แถวบน 2 ช่องใหญ่ · แถวล่าง 3 ช่อง — ต้องตรงกับ build-richmenu-image.mjs
+const TOP = [{ x: 0, w: 1250 }, { x: 1250, w: 1250 }];
+const BOTTOM = [{ x: 0, w: 833 }, { x: 833, w: 833 }, { x: 1666, w: 834 }];
+const cellBox = (i) => (i < 2 ? { ...TOP[i], y: 0 } : { ...BOTTOM[i - 2], y: ROW });
 const CELLS = [
   { label: "หย่อนถุง", path: "/drop" },
   { label: "คะแนน & แลกเงิน", path: "/points" },
   { label: "สถานะถุง", path: "/status" },
-  { label: "ราคาวันนี้", path: "/prices" },
   { label: "หน้าแรก", path: "/home" },
   { label: "โปรไฟล์", path: "/profile" },
 ];
@@ -66,9 +64,9 @@ const buildMenu = () => ({
   name: `ถุงเขียว เมนูหลัก ${new Date().toISOString().slice(0, 10)}`,
   chatBarText: "เมนูถุงเขียว",
   areas: CELLS.map((c, i) => {
-    const col = COLS[i % 3];
+    const b = cellBox(i);
     return {
-      bounds: { x: col.x, y: Math.floor(i / 3) * ROW, width: col.w, height: ROW },
+      bounds: { x: b.x, y: b.y, width: b.w, height: ROW },
       action: { type: "uri", label: c.label.slice(0, 20), uri: uri(c.path) },
     };
   }),

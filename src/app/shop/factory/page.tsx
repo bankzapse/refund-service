@@ -6,7 +6,7 @@ import { MATERIALS } from "@/lib/materials";
 import { centralPrice, factoryPrice, factoryProfitSummary } from "@/lib/selectors";
 import type { FactorySaleItem } from "@/lib/types";
 import { formatBaht, thaiDateTime } from "@/lib/utils";
-import { Factory, TrendingUp, Coins, Wallet, Scale } from "lucide-react";
+import { Factory, TrendingUp, Coins, Wallet, Scale, Info } from "lucide-react";
 
 type Period = "day" | "month" | "all";
 function periodSince(p: Period): Date | undefined {
@@ -115,6 +115,16 @@ export default function ShopFactoryPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ช่องราคาโรงงานแก้ได้ แต่ไม่ถูกบันทึกถาวร — เดิมไม่มีอะไรบอก ผู้ใช้เลยงงว่าทำไมพิมพ์แล้วไม่จำ */}
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-neutral-50 p-3 text-xs text-neutral-500 ring-1 ring-neutral-100">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+          <p>
+            ราคาโรงงานที่แก้ตรงนี้ใช้ <b className="text-neutral-700">เฉพาะการขายครั้งนี้</b> — ไม่ถูกบันทึกเป็นค่าตั้งต้น
+            <br />
+            ราคาตั้งต้นบริษัทเป็นผู้กำหนด (ถ้าช่องว่างแปลว่ายังไม่ได้ตั้ง — แจ้งบริษัทได้)
+          </p>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
