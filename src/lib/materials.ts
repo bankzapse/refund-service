@@ -11,10 +11,14 @@ export const MATERIALS: Material[] = [
   { id: "pp5", name: "พลาสติก PP5", unit: "กก.", pricePerUnit: 7, emoji: "🧺", category: "พลาสติก" },
   { id: "glass-bottle", name: "ขวดแก้ว", unit: "กก.", pricePerUnit: 2, emoji: "🍶", category: "แก้ว" },
   { id: "cardboard", name: "กระดาษลัง", unit: "กก.", pricePerUnit: 4, emoji: "📦", category: "กระดาษ" },
+  // ของที่ไม่เข้าหมวดไหน — ราคาต่ำไว้ก่อน แอดมินปรับได้ที่หน้า "ราคาของเก่า"
+  // 🔒 ราคายังมาจากตาราง material_prices เหมือนวัสดุอื่น ไม่ใช่ช่องกรอกอิสระ
+  //    (ถ้าให้กรอกราคาเองจะเปิดช่องให้ตีราคาเท่าไหร่ก็ได้แล้วแลกเป็นเงินจริง — ดู security round 6)
+  { id: "other", name: "อื่นๆ", unit: "กก.", pricePerUnit: 1, emoji: "🧩", category: "อื่นๆ" },
 ];
 
 export const MATERIAL_MAP: Record<string, Material> = Object.fromEntries(
   MATERIALS.map((m) => [m.id, m]),
 );
 
-export const CATEGORIES = ["โลหะ", "พลาสติก", "แก้ว", "กระดาษ"] as const;
+export const CATEGORIES = ["โลหะ", "พลาสติก", "แก้ว", "กระดาษ", "อื่นๆ"] as const;
