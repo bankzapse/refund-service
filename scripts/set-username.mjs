@@ -145,9 +145,18 @@ console.log("✅ ตั้ง username แล้ว");
 
 // 3) ปลดเบอร์ — ทำหลังสุดเสมอ เพราะเป็นขั้นที่ย้อนยากถ้าอย่างอื่นล้ม
 if (unlinkPhone) {
-  await auth(`admin/users/${u.id}`, { method: "PUT", body: JSON.stringify({ phone: "" }) });
+  // ⚠️ ต้องเป็น null — ส่ง "" ตัว GoTrue ไม่ลบให้ (เคยพลาดตรงนี้: profiles ว่าง
+  // แต่ auth ยังจองเบอร์อยู่ → สมัครเบอร์เดิมใหม่ไม่ได้ และดูจาก UI ไม่เห็นปัญหา)
+  await auth(`admin/users/${u.id}`, { method: "PUT", body: JSON.stringify({ phone: null }) });
   await rest(`profiles?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ phone: null }) });
-  console.log("✅ ปลดเบอร์ออกแล้ว — เบอร์นี้เอาไปสมัครใหม่ได้");
+
+  // ยืนยันว่าเบอร์หลุดจริงทั้งสองที่
+  const chk = await auth(`admin/users/${u.id}`, { method: "GET" });
+  if (chk?.phone) {
+    console.error(`⚠️ auth ยังจองเบอร์ ${chk.phone} อยู่ — เบอร์นี้ยังเอาไปสมัครใหม่ไม่ได้`);
+    process.exit(1);
+  }
+  console.log("✅ ปลดเบอร์ออกแล้ว (ทั้ง auth + profiles) — เบอร์นี้เอาไปสมัครใหม่ได้");
 }
 
 console.log(`\nลองเข้าสู่ระบบ: ชื่อผู้ใช้ "${username}" + รหัสผ่าน${password ? "ที่เพิ่งตั้ง" : "เดิม"}`);
