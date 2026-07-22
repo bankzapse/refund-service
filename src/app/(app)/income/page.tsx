@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Modal } from "@/components/ui";
 import { incomeSummary, ticketsForUser, jobsForSeller, jobsForBuyer } from "@/lib/selectors";
 import { formatBaht, thaiMonthLabel, thaiDate } from "@/lib/utils";
+import { realEmail } from "@/lib/username";
 import { MATERIAL_MAP } from "@/lib/materials";
 import {
   User,
@@ -55,7 +56,7 @@ export default function IncomePage() {
           </div>
           <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-3 text-sm text-neutral-500">
             <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-neutral-400" /> {u.phone}</p>
-            {u.email && <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-neutral-400" /> {u.email}</p>}
+            {realEmail(u.email) && <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-neutral-400" /> {realEmail(u.email)}</p>}
           </div>
           {/* LINE connect */}
           <button

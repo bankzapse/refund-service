@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Modal } from "@/components/ui";
 import { PayoutCard } from "@/components/PayoutCard";
 import { pointsOf } from "@/lib/selectors";
+import { realEmail } from "@/lib/username";
 import { REDEEM_TIERS } from "@/lib/types";
 import { formatBaht } from "@/lib/utils";
 import { Coins, Phone, Mail, LogOut, Trash2, ShieldAlert, ChevronRight, FileText, ShieldCheck } from "lucide-react";
@@ -44,7 +45,10 @@ export default function ProfilePage() {
         {/* info */}
         <div className="card divide-y divide-neutral-100 !py-1">
           <InfoRow icon={<Phone className="h-4 w-4" />} label="เบอร์โทรศัพท์" value={u.phone || "—"} />
-          <InfoRow icon={<Mail className="h-4 w-4" />} label="อีเมล" value={u.email || "—"} />
+          {/* อีเมลภายใน (line_xxx@line.local) ระบบสร้างเอง ผู้ใช้ไม่ได้กรอก — ซ่อนทั้งแถว */}
+          {realEmail(u.email) && (
+            <InfoRow icon={<Mail className="h-4 w-4" />} label="อีเมล" value={realEmail(u.email)!} />
+          )}
           <InfoRow icon={<Coins className="h-4 w-4" />} label="คะแนนสะสม" value={`${formatBaht(points)} คะแนน`} />
         </div>
 

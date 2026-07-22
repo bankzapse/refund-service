@@ -34,3 +34,16 @@ export function looksLikePhone(input: string): boolean {
   const d = String(input ?? "").replace(/\D/g, "");
   return /^0\d{8,9}$/.test(d);
 }
+
+/**
+ * อีเมลภายในที่ระบบสร้างเอง ไม่ใช่อีเมลจริงของผู้ใช้ — ห้ามเอาไปโชว์
+ *   line_<lineUserId>@line.local   (บัญชีที่เข้าผ่าน LINE)
+ *   <username>@thungkheow.local    (บัญชีหลังบ้าน)
+ * ผู้ใช้ไม่ได้กรอกเอง ส่งเมลไม่ถึง และยาวจนล้นการ์ด
+ */
+export const isInternalEmail = (email?: string | null) =>
+  /@(line|thungkheow)\.local$/i.test(String(email ?? ""));
+
+/** อีเมลที่ผู้ใช้กรอกเองเท่านั้น — คืน undefined ถ้าเป็นอีเมลภายใน */
+export const realEmail = (email?: string | null) =>
+  email && !isInternalEmail(email) ? email : undefined;
