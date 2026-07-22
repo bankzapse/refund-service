@@ -91,7 +91,7 @@ const cell = (i) => {
     </g>
     <circle cx="${cx}" cy="${cy - 150}" r="88" fill="#ffffff" opacity="0.22"/>
     <g transform="translate(${cx} ${cy - 150})">${ICONS[c.icon]}</g>
-    <text x="${cx}" y="${cy + 100}" font-family="${FONT}" font-size="124" font-weight="700"
+    <text x="${cx}" y="${cy + 100}" font-family="${FONT}" font-size="114" font-weight="700"
           fill="#ffffff" text-anchor="middle">${esc(c.label)}</text>
     <text x="${cx}" y="${cy + 212}" font-family="${FONT}" font-size="78"
           fill="#ffffff" opacity="0.85" text-anchor="middle">${esc(c.sub)}</text>`;
