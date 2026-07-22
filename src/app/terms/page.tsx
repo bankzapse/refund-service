@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalShell, Sec, UL } from "@/components/LegalShell";
 
 export const metadata: Metadata = {
-  title: "ข้อกำหนดการใช้งาน — ถุงเขียว",
+  title: "ข้อกำหนดการใช้งาน",
   description: "ข้อกำหนดและเงื่อนไขการใช้งานแอป ถุงเขียว (Thung Khiao)",
 };
 

@@ -150,7 +150,7 @@ export default function DropPage() {
       {/* sticky confirm — ยกขึ้นเหนือแท็บล่าง (ดู --bottom-nav-h ใน globals.css) */}
       <div className="fixed inset-x-0 bottom-[var(--bottom-nav-h)] z-30 mx-auto max-w-md border-t border-neutral-100 bg-white/95 px-5 py-3 backdrop-blur">
         <button className="btn-primary w-full" disabled={!canConfirm} onClick={confirm}>
-          {submitting ? <Spinner className="h-4 w-4" /> : <><ChevronRight className="h-4 w-4" /> ยืนยันหย่อนถุง {bags.length > 0 ? `(${bags.length})` : ""}</>}
+          {submitting ? <Spinner className="h-4 w-4" /> : <>ยืนยันหย่อนถุง {bags.length > 0 ? `(${bags.length})` : ""}</>}
         </button>
       </div>
 

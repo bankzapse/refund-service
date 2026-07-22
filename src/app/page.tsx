@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { Photo } from "@/components/Photo";
 import { LiffEntry } from "@/components/LiffEntry";
-import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESC, LEGAL_NAME, LEGAL_NAME_EN, SUPPORT_EMAIL, SUPPORT_TEL } from "@/lib/site";
+import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESC, LEGAL_NAME, LEGAL_NAME_EN, SUPPORT_EMAIL, SUPPORT_TEL, LINE_OA_ID, LINE_OA_ADD_URL } from "@/lib/site";
 import {
   Recycle, ScanLine, Coins, Banknote, Boxes, Leaf, ShieldCheck, MapPin, ArrowRight,
   PackageCheck, Building2, Smartphone, Mail, Phone, MessageCircle, Facebook, Plus,
@@ -286,7 +286,12 @@ export default function Landing() {
                 <p className="mb-3 text-sm font-semibold text-white">ติดต่อเรา</p>
                 <ul className="space-y-2 text-sm text-neutral-400">
                   <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-brand-400" /> support@thungkhiao.co</li>
-                  <li className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-brand-400" /> LINE: @thungkhiao</li>
+                  <li className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-brand-400" />
+                    <a href={LINE_OA_ADD_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                      LINE: {LINE_OA_ID}
+                    </a>
+                  </li>
                   <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-brand-400" /> 02-000-0000</li>
                 </ul>
               </div>
