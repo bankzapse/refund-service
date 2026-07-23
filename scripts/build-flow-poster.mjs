@@ -164,21 +164,46 @@ function materialStrip() {
     ${items}`;
 }
 
-function qrCard() {
+// คอลัมน์ขวา = การ์ด QR (บน) + การ์ดคำเตือนเรื่องขโมยถุง (ล่าง) สูงรวมเท่าการ์ดวัสดุ
+function rightColumn() {
   const cardX = SPLIT;
   const cardW = W - MARGIN - cardX;
-  const qr = 400;
-  const qx = cardX + 80;
-  const qy = BOT_Y + (BOT_H - qr) / 2;
-  const tx = qx + qr + 70;
-  return `
-    <rect x="${cardX}" y="${BOT_Y}" width="${cardW}" height="${BOT_H}" rx="44" fill="url(#gcard)"/>
-    <rect x="${qx - 26}" y="${qy - 26}" width="${qr + 52}" height="${qr + 52}" rx="30" fill="#ffffff"/>
+  const GAP = 24;
+  const qcH = 468;
+  const wcY = BOT_Y + qcH + GAP;
+  const wcH = BOT_H - qcH - GAP;
+
+  // การ์ด QR
+  const qr = 336;
+  const qx = cardX + 66;
+  const qy = BOT_Y + (qcH - qr) / 2;
+  const tx = qx + qr + 66;
+  const qrCard = `
+    <rect x="${cardX}" y="${BOT_Y}" width="${cardW}" height="${qcH}" rx="40" fill="url(#gcard)"/>
+    <rect x="${qx - 24}" y="${qy - 24}" width="${qr + 48}" height="${qr + 48}" rx="28" fill="#ffffff"/>
     <image href="${qrUri}" x="${qx}" y="${qy}" width="${qr}" height="${qr}"/>
-    <text x="${tx}" y="${BOT_Y + 238}" font-family="${FONT}" font-size="72" font-weight="700" fill="#ffffff">เริ่มที่นี่</text>
-    <text x="${tx}" y="${BOT_Y + 316}" font-family="${FONT}" font-size="48" fill="#eafaf0">สแกนเพิ่มเพื่อนใน LINE</text>
-    <rect x="${tx}" y="${BOT_Y + 362}" width="380" height="78" rx="39" fill="#ffffff"/>
-    <text x="${tx + 190}" y="${BOT_Y + 415}" font-family="${FONT}" font-size="48" font-weight="700" fill="#15803d" text-anchor="middle">LINE ${esc(LINE_OA_ID)}</text>`;
+    <text x="${tx}" y="${BOT_Y + 176}" font-family="${FONT}" font-size="68" font-weight="700" fill="#ffffff">เริ่มที่นี่</text>
+    <text x="${tx}" y="${BOT_Y + 248}" font-family="${FONT}" font-size="46" fill="#eafaf0">สแกนเพิ่มเพื่อนใน LINE</text>
+    <rect x="${tx}" y="${BOT_Y + 290}" width="372" height="74" rx="37" fill="#ffffff"/>
+    <text x="${tx + 186}" y="${BOT_Y + 340}" font-family="${FONT}" font-size="46" font-weight="700" fill="#15803d" text-anchor="middle">LINE ${esc(LINE_OA_ID)}</text>`;
+
+  // การ์ดคำเตือน — สามเหลี่ยม ! สีแดงเข้มบนพื้นครีม (โทนเอกสารกฎหมาย ดูจริงจัง)
+  const triX = cardX + 96;
+  const triCY = wcY + wcH / 2;
+  const tri = `
+    <g transform="translate(${triX} ${triCY})">
+      <path d="M0-52 L58 50 H-58 Z" fill="none" stroke="#b91c1c" stroke-width="11" stroke-linejoin="round"/>
+      <path d="M0-24 V14" stroke="#b91c1c" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="0" cy="34" r="6.5" fill="#b91c1c"/>
+    </g>`;
+  const wtx = triX + 96;
+  const warnCard = `
+    <rect x="${cardX}" y="${wcY}" width="${cardW}" height="${wcH}" rx="40" fill="#fff5f5" stroke="#f2b5b5" stroke-width="3"/>
+    ${tri}
+    <text x="${wtx}" y="${wcY + wcH / 2 - 10}" font-family="${FONT}" font-size="52" font-weight="700" fill="#991b1b">คำเตือน! การขโมยถุง</text>
+    <text x="${wtx}" y="${wcY + wcH / 2 + 58}" font-family="${FONT}" font-size="52" font-weight="700" fill="#991b1b">มีโทษตามกฎหมาย</text>`;
+
+  return qrCard + warnCard;
 }
 
 /* ---------- ประกอบ SVG ---------- */
@@ -210,7 +235,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
 
   <!-- bottom -->
   ${materialStrip()}
-  ${qrCard()}
+  ${rightColumn()}
 
   <!-- footer -->
   <rect x="0" y="${H - 92}" width="${W}" height="92" fill="url(#gband)"/>
