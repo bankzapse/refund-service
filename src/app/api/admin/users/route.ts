@@ -52,6 +52,21 @@ export async function POST(req: Request) {
 
   try {
     switch (action) {
+      case "updateCabinet": {
+        // แก้ข้อมูลตู้ (ชื่อ/ที่อยู่/จังหวัด/อำเภอ/ตำบล) — cabinets เขียนตรงไม่ได้ (RLS อ่านอย่างเดียว)
+        const { cabinetId, name, address, province, district, subdistrict } = body;
+        if (!cabinetId) return bad("missing cabinetId");
+        const patch: Record<string, unknown> = {};
+        if (name != null) patch.name = String(name).trim();
+        if (address != null) patch.address = String(address).trim();
+        if (province != null) patch.province = String(province).trim() || null;
+        if (district != null) patch.district = String(district).trim() || null;
+        if (subdistrict != null) patch.subdistrict = String(subdistrict).trim() || null;
+        if (!Object.keys(patch).length) return NextResponse.json({ ok: true });
+        const { error } = await table("cabinets").update(patch).eq("id", cabinetId);
+        if (error) return bad(error.message ?? "บันทึกข้อมูลตู้ไม่สำเร็จ");
+        return NextResponse.json({ ok: true });
+      }
       case "setCabinetLocation": {
         // ปักพิกัดตู้ (แก้ตู้เดิมที่ยังไม่มีพิกัด) — cabinets เขียนตรงไม่ได้ (RLS อ่านอย่างเดียว)
         // จึงอัปเดตผ่าน service-role ที่นี่ · จำกัดเฉพาะ admin (ตรวจไว้ด้านบนแล้ว)

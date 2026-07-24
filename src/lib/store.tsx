@@ -158,6 +158,7 @@ interface StoreValue {
   addCabinet: (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
   editCabinet: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   setCabinetLocation: (id: string, lat: number, lng: number) => void;
+  updateCabinetInfo: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
   addFranchise: (input: { code: string; name: string; ownerName: string; username: string; phone?: string; password?: string }) => void;
   editFranchise: (id: string, patch: { name?: string; ownerName?: string; phone?: string; password?: string; username?: string }) => void;
   removeFranchise: (id: string) => void;
@@ -1335,6 +1336,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [pushToast, adminUsersApi],
   );
 
+  // แก้ข้อมูลตู้ (บริษัท) — ชื่อ/ที่อยู่/จังหวัด/อำเภอ/ตำบล · Supabase ผ่าน service-role
+  const updateCabinetInfo = useCallback(
+    (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
+      if (supabaseConfigured) { adminUsersApi("updateCabinet", { cabinetId: id, ...patch }, "บันทึกข้อมูลตู้แล้ว"); return; }
+      setDb((d) => ({
+        ...d,
+        cabinets: d.cabinets.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                ...(patch.name != null ? { name: patch.name.trim() || c.name } : {}),
+                ...(patch.address != null ? { location: { ...c.location, address: patch.address.trim() } } : {}),
+                ...(patch.province != null ? { province: patch.province.trim() || undefined } : {}),
+                ...(patch.district != null ? { district: patch.district.trim() || undefined } : {}),
+                ...(patch.subdistrict != null ? { subdistrict: patch.subdistrict.trim() || undefined } : {}),
+              }
+            : c,
+        ),
+      }));
+      pushToast("บันทึกข้อมูลตู้แล้ว", "success");
+    },
+    [pushToast, adminUsersApi],
+  );
+
   // แก้ไขชื่อ/ที่อยู่ตู้ (แฟรนไชส์)
   const editCabinet = useCallback(
     (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
@@ -1480,6 +1505,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setAdminPermissions,
     addCabinet,
     setCabinetLocation,
+    updateCabinetInfo,
     editCabinet,
     addFranchise,
     editFranchise,

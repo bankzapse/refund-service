@@ -22,7 +22,7 @@ type CabForm = { name: string; address: string; province: string; district: stri
 const EMPTY_CAB: CabForm = { name: "", address: "", province: "", district: "", subdistrict: "" };
 
 export default function AdminFranchisesPage() {
-  const { db, addFranchise, addCabinet, editFranchise, removeFranchise, setCabinetLocation } = useStore();
+  const { db, addFranchise, addCabinet, editFranchise, removeFranchise, setCabinetLocation, updateCabinetInfo } = useStore();
   const allFranchises = franchisesWithStats(db);
   const nearFull = cabinetsWithCounts(db)
     .filter((c) => c.pending >= NEAR_FULL)
@@ -105,6 +105,20 @@ export default function AdminFranchisesPage() {
   // ตั้งตำแหน่งตู้เดิมที่ยังไม่มีพิกัด (0,0)
   const [locCab, setLocCab] = useState<{ id: string; name: string; code: string; address: string; geo: { lat: number; lng: number } | null } | null>(null);
   const saveLoc = () => { if (locCab?.geo) { setCabinetLocation(locCab.id, locCab.geo.lat, locCab.geo.lng); setLocCab(null); } };
+
+  // แก้ข้อมูลตู้ (ชื่อ/ที่อยู่/จังหวัด/อำเภอ/ตำบล)
+  const [editCab, setEditCab] = useState<{ id: string; code: string } | null>(null);
+  const [ec, setEc] = useState<CabForm>({ ...EMPTY_CAB });
+  const openEditCab = (c: { id: string; code: string; name: string; location: { address: string }; province?: string; district?: string; subdistrict?: string }) => {
+    setEc({ name: c.name, address: c.location.address, province: c.province ?? "", district: c.district ?? "", subdistrict: c.subdistrict ?? "" });
+    setEditCab({ id: c.id, code: c.code });
+  };
+  const ecComplete = !!(ec.name.trim() && ec.address.trim() && ec.province && ec.district.trim() && ec.subdistrict.trim());
+  const saveEditCab = () => {
+    if (!editCab || !ecComplete) return;
+    updateCabinetInfo(editCab.id, { name: ec.name, address: ec.address, province: ec.province, district: ec.district, subdistrict: ec.subdistrict });
+    setEditCab(null);
+  };
 
   // พิมพ์ QR ตู้ของแฟรนไชส์ (บริษัทพิมพ์ให้ได้)
   const [qrFor, setQrFor] = useState<FranchiseWithStats | null>(null);
@@ -439,6 +453,13 @@ export default function AdminFranchisesPage() {
                     {!hasGeo(c.location.lat, c.location.lng) && <p className="mt-0.5 text-[11px] font-medium text-amber-600">⚠ ยังไม่ปักหมุด — ไม่ขึ้นบนแผนที่</p>}
                   </div>
                   <button
+                    onClick={() => openEditCab(c)}
+                    className="shrink-0 rounded-lg bg-neutral-100 p-2 text-neutral-500 hover:text-brand-600"
+                    title="แก้ไขข้อมูลตู้"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => setLocCab({ id: c.id, name: c.name, code: displayCabinetCode(c.code), address: [c.name, c.location.address, c.subdistrict, c.district, c.province].filter(Boolean).join(" "), geo: hasGeo(c.location.lat, c.location.lng) ? { lat: c.location.lat, lng: c.location.lng } : null })}
                     className={`shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold ${hasGeo(c.location.lat, c.location.lng) ? "bg-neutral-100 text-neutral-500" : "bg-amber-100 text-amber-700"}`}
                     title="ตั้งตำแหน่งบนแผนที่"
@@ -471,6 +492,33 @@ export default function AdminFranchisesPage() {
             <LocationPicker value={locCab.geo} onChange={(lat, lng) => setLocCab((s) => (s ? { ...s, geo: { lat, lng } } : s))} query={locCab.address} />
           </div>
         )}
+      </Modal>
+
+      {/* แก้ไขข้อมูลตู้ (ชื่อ/ที่อยู่/จังหวัด/อำเภอ/ตำบล) */}
+      <Modal
+        open={!!editCab}
+        onClose={() => setEditCab(null)}
+        title={editCab ? `แก้ไขตู้ ${editCab.code}` : "แก้ไขตู้"}
+        footer={
+          <>
+            <button className="btn-outline flex-1" onClick={() => setEditCab(null)}>ยกเลิก</button>
+            <button className="btn-primary flex-1 disabled:opacity-50" disabled={!ecComplete} onClick={saveEditCab}>บันทึก</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="label">ชื่อจุดตั้ง</label>
+            <input className="input" value={ec.name} onChange={(e) => setEc({ ...ec, name: e.target.value })} placeholder="Lotus's รามอินทรา" />
+          </div>
+          <div>
+            <label className="label">ที่อยู่ / จุดสังเกต</label>
+            <input className="input" value={ec.address} onChange={(e) => setEc({ ...ec, address: e.target.value })} placeholder="ชั้น G ทางเข้าหลัก" />
+          </div>
+          <AddressPicker province={ec.province} district={ec.district} subdistrict={ec.subdistrict} onChange={(v) => setEc({ ...ec, ...v })} />
+          {!ecComplete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล)</p>}
+          <p className="text-[11px] text-neutral-400">ปรับตำแหน่งบนแผนที่ได้ที่ปุ่ม “ปักหมุด” ในรายการตู้</p>
+        </div>
       </Modal>
     </div>
   );
