@@ -52,6 +52,31 @@ export async function POST(req: Request) {
 
   try {
     switch (action) {
+      case "closeMonthlyBonus": {
+        // ปิดยอดโบนัสประจำเดือน — เครดิตแต้มโบนัสให้ผู้ขายทีเดียว (points ถูก guard → ใช้ service-role)
+        // กันจ่ายซ้ำด้วยโน้ต "โบนัสประจำเดือน YYYY-MM" (ถ้ามีแล้ว = ปิดยอดไปแล้ว)
+        const { month, credits } = body;
+        if (!/^\d{4}-\d{2}$/.test(String(month || ""))) return bad("รูปแบบเดือนไม่ถูกต้อง");
+        const note = `โบนัสประจำเดือน ${month}`;
+        const { data: existing } = await table("point_transactions").select("id").eq("note", note).limit(1);
+        if (existing?.length) return bad("ปิดยอดโบนัสเดือนนี้ไปแล้ว");
+        const rows = (Array.isArray(credits) ? credits : []).filter((c) => c && c.userId && Number(c.points) > 0);
+        let count = 0;
+        let total = 0;
+        for (const c of rows) {
+          const pts = Math.min(Math.round(Number(c.points)), 100000); // กันค่าผิดปกติ
+          if (pts <= 0) continue;
+          const { data: prof } = await table("profiles").select("points, role").eq("id", c.userId).maybeSingle();
+          if (!prof || prof.role !== "seller") continue; // จ่ายเฉพาะบัญชีผู้ขายจริง
+          const bal = Number(prof.points ?? 0) + pts;
+          const { error: e1 } = await table("profiles").update({ points: bal }).eq("id", c.userId);
+          if (e1) continue;
+          await table("point_transactions").insert({ user_id: c.userId, type: "adjust", points: pts, balance_after: bal, note });
+          count++;
+          total += pts;
+        }
+        return NextResponse.json({ ok: true, count, total });
+      }
       case "updateCabinet": {
         // แก้ข้อมูลตู้ (ชื่อ/ที่อยู่/จังหวัด/อำเภอ/ตำบล) — cabinets เขียนตรงไม่ได้ (RLS อ่านอย่างเดียว)
         const { cabinetId, name, address, province, district, subdistrict } = body;

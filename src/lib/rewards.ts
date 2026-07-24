@@ -52,9 +52,8 @@ export interface MonthlyReward {
   totalBonusPoints: number; // โบนัสรวมเดือนนี้ (ขั้นบันได + ภารกิจ)
 }
 
-/** สรุปโบนัส + ภารกิจของผู้ขายในเดือนปัจจุบัน (คำนวณจากถุงจริง) */
-export function monthlyRewards(db: DB, userId: string): MonthlyReward {
-  const month = currentMonth();
+/** สรุปโบนัส + ภารกิจของผู้ขาย (คำนวณจากถุงจริง) · ระบุเดือนได้ (ดีฟอลต์ = เดือนนี้) */
+export function monthlyRewards(db: DB, userId: string, month: string = currentMonth()): MonthlyReward {
   const bags = (db.bags ?? []).filter((b) => b.userId === userId && (b.droppedAt ?? "").slice(0, 7) === month);
 
   const bagsThisMonth = bags.length;
@@ -95,4 +94,21 @@ export function monthlyRewards(db: DB, userId: string): MonthlyReward {
     missionBonusPoints,
     totalBonusPoints: tierBonusPoints + missionBonusPoints,
   };
+}
+
+/** โน้ตของ pointTxn โบนัสประจำเดือน — ใช้กันจ่ายซ้ำ (ถ้ามีโน้ตนี้ = ปิดยอดแล้ว) */
+export const bonusTxnNote = (month: string) => `โบนัสประจำเดือน ${month}`;
+
+/** ปิดยอดโบนัสของเดือนนี้ไปแล้วหรือยัง (เช็คจาก pointTxn ที่มีโน้ตโบนัสของเดือนนั้น) */
+export function isMonthBonusClosed(db: DB, month: string): boolean {
+  return (db.pointTxns ?? []).some((t) => t.note === bonusTxnNote(month));
+}
+
+/** โบนัสที่ผู้ขายแต่ละคนจะได้ในเดือนนั้น (เฉพาะที่ > 0) — สำหรับบริษัทปิดยอด */
+export function sellerBonuses(db: DB, month: string): { userId: string; name: string; bonus: number }[] {
+  return (db.users ?? [])
+    .filter((u) => u.role === "seller")
+    .map((u) => ({ userId: u.id, name: u.name, bonus: monthlyRewards(db, u.id, month).totalBonusPoints }))
+    .filter((x) => x.bonus > 0)
+    .sort((a, b) => b.bonus - a.bonus);
 }

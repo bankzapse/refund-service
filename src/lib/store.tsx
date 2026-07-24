@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { isMonthBonusClosed, sellerBonuses, bonusTxnNote } from "./rewards";
 import type { Bill, BillItem, Expense, Job, JobStatus, Role, ScheduleSlot, User, WalletTxn, MeshBag, BagItem, PointTxn, Redemption, Cabinet, Franchise, PayoutAccount, FranchisePayout, FactorySale, FactorySaleItem } from "./types";
 import { POINTS_PER_BAHT, bagQr } from "./types";
 import { createInitialDB, emptyDB, type DB } from "./seed";
@@ -162,6 +163,7 @@ interface StoreValue {
   addFranchise: (input: { code: string; name: string; ownerName: string; username: string; phone?: string; password?: string }) => void;
   editFranchise: (id: string, patch: { name?: string; ownerName?: string; phone?: string; password?: string; username?: string }) => void;
   removeFranchise: (id: string) => void;
+  closeMonthlyBonus: (month: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -1430,6 +1432,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [db.users, pushToast, adminUsersApi],
   );
 
+  // ปิดยอดโบนัสประจำเดือน (บริษัทกด) — คำนวณโบนัสทุกผู้ขายแล้วเครดิตแต้มทีเดียว
+  // กันจ่ายซ้ำด้วยโน้ต bonusTxnNote(month) · Supabase เครดิตผ่าน service-role (points ถูก guard)
+  const closeMonthlyBonus = useCallback(
+    (month: string) => {
+      if (isMonthBonusClosed(db, month)) { pushToast(`ปิดยอดโบนัสเดือน ${month} ไปแล้ว`, "info"); return; }
+      const list = sellerBonuses(db, month);
+      if (!list.length) { pushToast("ไม่มีโบนัสให้จ่ายในเดือนนี้", "info"); return; }
+      if (supabaseConfigured) {
+        adminUsersApi("closeMonthlyBonus", { month, credits: list.map((x) => ({ userId: x.userId, points: x.bonus })) }, `ปิดยอด & จ่ายโบนัส ${list.length} ราย`);
+        return;
+      }
+      const now = todayISO();
+      const note = bonusTxnNote(month);
+      setDb((d) => {
+        const txns: PointTxn[] = [];
+        const users = d.users.map((u) => {
+          const hit = list.find((x) => x.userId === u.id);
+          if (!hit) return u;
+          const bal = (u.points ?? 0) + hit.bonus;
+          txns.push({ id: uid("pt-"), userId: u.id, type: "adjust", points: hit.bonus, balanceAfter: bal, note, date: now });
+          return { ...u, points: bal };
+        });
+        return { ...d, users, pointTxns: [...txns, ...d.pointTxns] };
+      });
+      pushToast(`จ่ายโบนัส ${list.length} ราย รวม ${list.reduce((s, x) => s + x.bonus, 0)} แต้ม`, "success");
+    },
+    [db, pushToast, adminUsersApi],
+  );
+
   // ลบแฟรนไชส์ (พร้อมตู้ + บัญชีเจ้าของ) — บริษัทเท่านั้น
   const removeFranchise = useCallback(
     (id: string) => {
@@ -1510,6 +1541,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addFranchise,
     editFranchise,
     removeFranchise,
+    closeMonthlyBonus,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
