@@ -157,6 +157,7 @@ interface StoreValue {
   rejectRedemption: (id: string) => void;
   addCabinet: (input: { code?: string; name: string; address: string; province?: string; district?: string; subdistrict?: string; franchiseId: string; franchiseCode: string; lat?: number; lng?: number }) => void;
   editCabinet: (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => void;
+  setCabinetLocation: (id: string, lat: number, lng: number) => void;
   addFranchise: (input: { code: string; name: string; ownerName: string; username: string; phone?: string; password?: string }) => void;
   editFranchise: (id: string, patch: { name?: string; ownerName?: string; phone?: string; password?: string }) => void;
   removeFranchise: (id: string) => void;
@@ -1324,6 +1325,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [db.cabinets, pushToast],
   );
 
+  // ปักพิกัดตู้บนแผนที่ (บริษัท) — โหมด Supabase ผ่าน service-role (cabinets เขียนตรงไม่ได้)
+  const setCabinetLocation = useCallback(
+    (id: string, lat: number, lng: number) => {
+      if (supabaseConfigured) { adminUsersApi("setCabinetLocation", { cabinetId: id, lat, lng }, "บันทึกตำแหน่งตู้แล้ว"); return; }
+      setDb((d) => ({ ...d, cabinets: d.cabinets.map((c) => (c.id === id ? { ...c, location: { ...c.location, lat, lng } } : c)) }));
+      pushToast("บันทึกตำแหน่งตู้แล้ว", "success");
+    },
+    [pushToast, adminUsersApi],
+  );
+
   // แก้ไขชื่อ/ที่อยู่ตู้ (แฟรนไชส์)
   const editCabinet = useCallback(
     (id: string, patch: { name?: string; address?: string; province?: string; district?: string; subdistrict?: string }) => {
@@ -1465,6 +1476,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     removeAdmin,
     setAdminPermissions,
     addCabinet,
+    setCabinetLocation,
     editCabinet,
     addFranchise,
     editFranchise,

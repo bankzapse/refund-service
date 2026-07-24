@@ -21,6 +21,14 @@ export function formatDistance(km: number): string {
 }
 
 /**
+ * ตู้มีพิกัดจริงหรือยัง — ตู้ที่ยังไม่ได้ปักหมุดจะเป็น (0,0) (กลางทะเล)
+ * ไทยอยู่ราว lat 6–20, lng 97–106 → พิกัดจริงห่างจาก 0,0 มาก
+ */
+export function hasGeo(lat?: number | null, lng?: number | null): boolean {
+  return Number.isFinite(lat) && Number.isFinite(lng) && (Math.abs(lat as number) > 1 || Math.abs(lng as number) > 1);
+}
+
+/**
  * ลิงก์นำทาง Google Maps — แผนที่ในแอปเป็น OSM ก็จริง แต่ปุ่ม "นำทาง"
  * เปิดแอป Google Maps ให้ผู้ใช้กดนำทางจริง (แค่เปิดลิงก์ ไม่ใช้ API/ไม่ต้อง key)
  */

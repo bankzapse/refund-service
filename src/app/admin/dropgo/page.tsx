@@ -5,6 +5,7 @@ import { dropGoSummary, recentCreditedBags, pendingRedemptions } from "@/lib/sel
 import { formatBaht, thaiDateTime } from "@/lib/utils";
 import { POINTS_PER_BAHT, cabinetFullCode } from "@/lib/types";
 import { CabinetMap, type CabinetPin } from "@/components/CabinetMap";
+import { hasGeo } from "@/lib/geo";
 import { Box, PackageOpen, Coins, Banknote, Recycle, Trophy, Clock, PackageCheck, MapPin } from "lucide-react";
 
 export default function AdminDropGoPage() {
@@ -15,17 +16,21 @@ export default function AdminDropGoPage() {
   const pendingCabs = s.cabinets.filter((c) => c.pending > 0); // เฉพาะตู้ที่มีถุงรอคัดแยก
   const maxCab = Math.max(1, ...pendingCabs.map((c) => c.pending));
 
-  // หมุดตู้บนแผนที่ — ตัวเลข = ถุงที่หย่อนแล้วรอเก็บไปคัดแยก (อยู่ที่ตู้ตอนนี้)
-  const pins: CabinetPin[] = s.cabinets.map((c) => ({
-    id: c.id,
-    lat: c.location.lat,
-    lng: c.location.lng,
-    name: c.name,
-    code: cabinetFullCode(c.franchiseCode, c.code),
-    address: c.location.address,
-    badge: c.dropped,
-    badgeLabel: c.dropped > 0 ? `${c.dropped} ถุงรอเก็บ` : "ไม่มีถุงค้าง",
-  }));
+  // หมุดตู้บนแผนที่ — เฉพาะตู้ที่ปักหมุดแล้ว (ตู้ 0,0 = ยังไม่ตั้งพิกัด ข้ามไป ไม่ให้แผนที่ไปกลางทะเล)
+  // ตัวเลข = ถุงที่หย่อนแล้วรอเก็บไปคัดแยก (อยู่ที่ตู้ตอนนี้)
+  const pins: CabinetPin[] = s.cabinets
+    .filter((c) => hasGeo(c.location.lat, c.location.lng))
+    .map((c) => ({
+      id: c.id,
+      lat: c.location.lat,
+      lng: c.location.lng,
+      name: c.name,
+      code: cabinetFullCode(c.franchiseCode, c.code),
+      address: c.location.address,
+      badge: c.dropped,
+      badgeLabel: c.dropped > 0 ? `${c.dropped} ถุงรอเก็บ` : "ไม่มีถุงค้าง",
+    }));
+  const noGeoCount = s.cabinets.filter((c) => !hasGeo(c.location.lat, c.location.lng)).length;
 
   return (
     <div className="space-y-6">
@@ -46,8 +51,14 @@ export default function AdminDropGoPage() {
       {/* แผนที่ตู้ทั้งหมด */}
       <div className="card">
         <h2 className="mb-3 flex items-center gap-1.5 font-bold text-neutral-800"><MapPin className="h-4 w-4 text-brand-600" /> แผนที่ตู้ทั้งหมด ({s.cabinetCount} ตู้)</h2>
-        <CabinetMap pins={pins} height={400} />
-        <p className="mt-2 text-xs text-neutral-400">ตัวเลขบนหมุด = ถุงที่หย่อนแล้วรอเก็บไปคัดแยก (อยู่ที่ตู้ตอนนี้) · หมุดเทา = ตู้ว่าง · แตะหมุดเพื่อดูรายละเอียด/นำทาง</p>
+        {pins.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 rounded-2xl bg-neutral-50 py-14 text-center text-sm text-neutral-400 ring-1 ring-neutral-100">
+            <MapPin className="h-7 w-7" /> ยังไม่มีตู้ที่ปักหมุด · ไปที่ <b className="text-neutral-500">แฟรนไชส์ → ตู้ &amp; QR → ปักหมุด</b> เพื่อตั้งตำแหน่ง
+          </div>
+        ) : (
+          <CabinetMap pins={pins} height={400} />
+        )}
+        <p className="mt-2 text-xs text-neutral-400">ตัวเลขบนหมุด = ถุงที่หย่อนแล้วรอเก็บไปคัดแยก (อยู่ที่ตู้ตอนนี้) · หมุดเทา = ตู้ว่าง · แตะหมุดเพื่อดูรายละเอียด/นำทาง{noGeoCount > 0 && <span className="text-amber-600"> · มี {noGeoCount} ตู้ยังไม่ปักหมุด (ตั้งที่หน้าแฟรนไชส์)</span>}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

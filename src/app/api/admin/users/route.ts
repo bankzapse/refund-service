@@ -52,6 +52,16 @@ export async function POST(req: Request) {
 
   try {
     switch (action) {
+      case "setCabinetLocation": {
+        // ปักพิกัดตู้ (แก้ตู้เดิมที่ยังไม่มีพิกัด) — cabinets เขียนตรงไม่ได้ (RLS อ่านอย่างเดียว)
+        // จึงอัปเดตผ่าน service-role ที่นี่ · จำกัดเฉพาะ admin (ตรวจไว้ด้านบนแล้ว)
+        const { cabinetId, lat, lng } = body;
+        if (!cabinetId || !Number.isFinite(lat) || !Number.isFinite(lng)) return bad("พิกัดไม่ครบ");
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return bad("พิกัดไม่ถูกต้อง");
+        const { error } = await table("cabinets").update({ lat, lng }).eq("id", cabinetId);
+        if (error) return bad(error.message ?? "บันทึกตำแหน่งไม่สำเร็จ");
+        return NextResponse.json({ ok: true });
+      }
       case "createFranchise": {
         // เข้าระบบด้วย "ชื่อผู้ใช้" (username → email ภายใน) · เบอร์เป็นแค่ข้อมูลติดต่อ
         const { code, name, ownerName, username, phone, password } = body;

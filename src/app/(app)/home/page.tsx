@@ -22,7 +22,7 @@ import {
   cabinetsWithCounts,
   type CabinetWithCounts,
 } from "@/lib/selectors";
-import { RADIUS_KM, DEFAULT_BASE, distanceKm, formatDistance, directionsUrl } from "@/lib/geo";
+import { RADIUS_KM, DEFAULT_BASE, distanceKm, formatDistance, directionsUrl, hasGeo } from "@/lib/geo";
 import { displayCabinetCode } from "@/lib/types";
 import { CabinetMap, type CabinetPin } from "@/components/CabinetMap";
 import { MIN_CREDIT } from "@/lib/fees";
@@ -69,7 +69,7 @@ export default function HomePage() {
   // ตู้ใกล้ผู้ขาย — เรียงตามระยะจากตำแหน่งฐาน (ตัดตู้ที่ปิดซ่อม)
   const nearbyCabs = isSeller
     ? cabinetsWithCounts(db)
-        .filter((c) => c.status !== "maintenance")
+        .filter((c) => c.status !== "maintenance" && hasGeo(c.location.lat, c.location.lng)) // เฉพาะตู้ที่ปักหมุดแล้ว
         .map((c) => ({ c, km: distanceKm(base.lat, base.lng, c.location.lat, c.location.lng) }))
         .sort((a, b) => a.km - b.km)
     : [];

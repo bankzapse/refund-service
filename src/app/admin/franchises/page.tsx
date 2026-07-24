@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
 import { AddressPicker } from "@/components/AddressPicker";
+import { LocationPicker } from "@/components/LocationPicker";
+import { hasGeo } from "@/lib/geo";
 import { franchisesWithStats, franchiseRevenue, cabinetsWithCounts, cabinetsForFranchise, type FranchiseWithStats } from "@/lib/selectors";
 import { cabinetFullCode, displayCabinetCode } from "@/lib/types";
 import { isValidUsername } from "@/lib/username";
@@ -19,7 +21,7 @@ type CabForm = { name: string; address: string; province: string; district: stri
 const EMPTY_CAB: CabForm = { name: "", address: "", province: "", district: "", subdistrict: "" };
 
 export default function AdminFranchisesPage() {
-  const { db, addFranchise, addCabinet, editFranchise, removeFranchise } = useStore();
+  const { db, addFranchise, addCabinet, editFranchise, removeFranchise, setCabinetLocation } = useStore();
   const franchises = franchisesWithStats(db);
   const nearFull = cabinetsWithCounts(db)
     .filter((c) => c.pending >= NEAR_FULL)
@@ -79,16 +81,21 @@ export default function AdminFranchisesPage() {
   // เพิ่มตู้ (บริษัทเท่านั้น — ผูกกับสัญญาเช่าซื้อ)
   const [cabFor, setCabFor] = useState<FranchiseWithStats | null>(null);
   const [cab, setCab] = useState<CabForm>({ ...EMPTY_CAB });
-  const cabComplete = !!(cab.name.trim() && cab.address.trim() && cab.province && cab.district.trim() && cab.subdistrict.trim());
+  const [cabGeo, setCabGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const cabComplete = !!(cab.name.trim() && cab.address.trim() && cab.province && cab.district.trim() && cab.subdistrict.trim() && cabGeo);
   const nextTk = "TK-" + String(db.cabinets.map((c) => Number(/^TK0*(\d+)$/.exec(c.code)?.[1] ?? 0)).reduce((a, b) => Math.max(a, b), 0) + 1).padStart(2, "0");
-  const openAddCab = (f: FranchiseWithStats) => { setCab({ ...EMPTY_CAB }); setCabFor(f); };
+  const openAddCab = (f: FranchiseWithStats) => { setCab({ ...EMPTY_CAB }); setCabGeo(null); setCabFor(f); };
+
+  // ตั้งตำแหน่งตู้เดิมที่ยังไม่มีพิกัด (0,0)
+  const [locCab, setLocCab] = useState<{ id: string; name: string; code: string; address: string; geo: { lat: number; lng: number } | null } | null>(null);
+  const saveLoc = () => { if (locCab?.geo) { setCabinetLocation(locCab.id, locCab.geo.lat, locCab.geo.lng); setLocCab(null); } };
 
   // พิมพ์ QR ตู้ของแฟรนไชส์ (บริษัทพิมพ์ให้ได้)
   const [qrFor, setQrFor] = useState<FranchiseWithStats | null>(null);
   const qrCabinets = qrFor ? cabinetsForFranchise(db, qrFor.id) : [];
   const saveCab = () => {
-    if (!cabFor || !cabComplete) return;
-    addCabinet({ name: cab.name, address: cab.address, province: cab.province, district: cab.district, subdistrict: cab.subdistrict, franchiseId: cabFor.id, franchiseCode: cabFor.code });
+    if (!cabFor || !cabComplete || !cabGeo) return;
+    addCabinet({ name: cab.name, address: cab.address, province: cab.province, district: cab.district, subdistrict: cab.subdistrict, franchiseId: cabFor.id, franchiseCode: cabFor.code, lat: cabGeo.lat, lng: cabGeo.lng });
     setCabFor(null);
   };
 
@@ -361,7 +368,12 @@ export default function AdminFranchisesPage() {
             <input className="input" value={cab.address} onChange={(e) => setCab({ ...cab, address: e.target.value })} placeholder="ชั้น G ทางเข้าหลัก" />
           </div>
           <AddressPicker province={cab.province} district={cab.district} subdistrict={cab.subdistrict} onChange={(v) => setCab({ ...cab, ...v })} />
-          {!cabComplete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล) จึงจะเพิ่มตู้ได้</p>}
+          <LocationPicker
+            value={cabGeo}
+            onChange={(lat, lng) => setCabGeo({ lat, lng })}
+            query={[cab.name, cab.address, cab.subdistrict, cab.district, cab.province].filter(Boolean).join(" ")}
+          />
+          {!cabComplete && <p className="text-xs text-amber-600">* กรอกให้ครบทุกช่อง (ชื่อ · ที่อยู่ · จังหวัด · อำเภอ · ตำบล) และปักหมุดตำแหน่งตู้บนแผนที่</p>}
         </div>
       </Modal>
 
@@ -384,11 +396,39 @@ export default function AdminFranchisesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-neutral-800">{c.name} <span className="font-mono font-normal text-brand-700">{displayCabinetCode(c.code)}</span></p>
                     <p className="flex items-center gap-1 truncate text-xs text-neutral-400"><MapPin className="h-3 w-3 shrink-0" /> {c.location.address}{area && ` · ${area}`}</p>
+                    {!hasGeo(c.location.lat, c.location.lng) && <p className="mt-0.5 text-[11px] font-medium text-amber-600">⚠ ยังไม่ปักหมุด — ไม่ขึ้นบนแผนที่</p>}
                   </div>
+                  <button
+                    onClick={() => setLocCab({ id: c.id, name: c.name, code: displayCabinetCode(c.code), address: [c.name, c.location.address, c.subdistrict, c.district, c.province].filter(Boolean).join(" "), geo: hasGeo(c.location.lat, c.location.lng) ? { lat: c.location.lat, lng: c.location.lng } : null })}
+                    className={`shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold ${hasGeo(c.location.lat, c.location.lng) ? "bg-neutral-100 text-neutral-500" : "bg-amber-100 text-amber-700"}`}
+                    title="ตั้งตำแหน่งบนแผนที่"
+                  >
+                    <MapPin className="inline h-3.5 w-3.5" /> {hasGeo(c.location.lat, c.location.lng) ? "" : "ปักหมุด"}
+                  </button>
                   <Link href={`/admin/cabinets/${c.id}/qr`} className="btn-primary shrink-0 !px-3 !py-2 text-xs"><Printer className="h-3.5 w-3.5" /> พิมพ์ QR</Link>
                 </div>
               );
             })}
+          </div>
+        )}
+      </Modal>
+
+      {/* ตั้งตำแหน่งตู้บนแผนที่ */}
+      <Modal
+        open={!!locCab}
+        onClose={() => setLocCab(null)}
+        title={locCab ? `ตั้งตำแหน่ง ${locCab.code}` : "ตั้งตำแหน่งตู้"}
+        footer={
+          <>
+            <button className="btn-outline flex-1" onClick={() => setLocCab(null)}>ยกเลิก</button>
+            <button className="btn-primary flex-1 disabled:opacity-50" disabled={!locCab?.geo} onClick={saveLoc}>บันทึกตำแหน่ง</button>
+          </>
+        }
+      >
+        {locCab && (
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-600">{locCab.name}</p>
+            <LocationPicker value={locCab.geo} onChange={(lat, lng) => setLocCab((s) => (s ? { ...s, geo: { lat, lng } } : s))} query={locCab.address} />
           </div>
         )}
       </Modal>
